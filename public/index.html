@@ -141,17 +141,18 @@
   </div>
 </div>
 
-<!-- Scan result confirmation -->
+<!-- Scan result confirmation (own-QR import) -->
 <div id="result-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="result-title">
-  <div class="modal-panel modal-panel-small">
-    <div class="modal-head">
-      <h2 id="result-title">QR leído ✔</h2>
-      <button id="result-close" class="btn-icon" aria-label="Cerrar">✕</button>
+  <div class="modal-panel modal-panel-small modal-sheet-panel">
+    <div class="modal-sheet-handle" aria-hidden="true"></div>
+    <div class="import-head">
+      <h2 id="result-title">Importar álbum</h2>
+      <p class="import-subtitle">Álbum Mundial 2026</p>
     </div>
     <div id="result-body" class="result-body"></div>
-    <div class="modal-actions">
-      <button id="result-cancel" class="btn-ghost">Cancelar</button>
-      <button id="result-apply" class="btn-gold">Aplicar a mi álbum</button>
+    <div class="modal-actions modal-actions-stack">
+      <button id="result-apply" class="btn-gold btn-block">Actualizar mi álbum</button>
+      <button id="result-cancel" class="btn-ghost btn-block">Cancelar</button>
     </div>
   </div>
 </div>

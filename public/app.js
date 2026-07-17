@@ -1615,17 +1615,31 @@ function handleScannedText(text) {
 
 function showResultPreview(ownedList) {
   let newOnes = 0;
+  let totalRepeatUnits = 0; // extra copies beyond the 1st, per sticker (from the QR's repeat data, if any)
   for (const item of ownedList) {
     if (!getEntry(item.key).owned) newOnes++;
+    if (item.qty > 1) totalRepeatUnits += item.qty - 1;
   }
 
   resultBody.innerHTML = `
-    <p>El código trae <strong>${ownedList.length}</strong> figuritas distintas marcadas como tuyas en la app Figuritas.</p>
-    <div class="result-stat-grid">
-      <div class="result-stat"><b>${ownedList.length}</b><span>EN EL QR</span></div>
-      <div class="result-stat"><b>${newOnes}</b><span>NUEVAS PARA VOS</span></div>
+    <p class="import-warn">Vamos a <strong>agregar</strong> las figuritas nuevas de este código a tu álbum. Nada de lo que ya tenías cargado a mano — precios, cantidades ni repetidas — se borra ni se pisa.</p>
+    <p class="import-stats-caption">El código trae</p>
+    <div class="import-stats-card">
+      <div class="import-stat-cell">
+        <div class="import-stat-value">${ownedList.length.toLocaleString("es-AR")}</div>
+        <div class="import-stat-label">Pegadas</div>
+      </div>
+      <div class="import-stat-divider" aria-hidden="true"></div>
+      <div class="import-stat-cell">
+        <div class="import-stat-value">${totalRepeatUnits.toLocaleString("es-AR")}</div>
+        <div class="import-stat-label">Repetidas</div>
+      </div>
     </div>
-    <p style="margin-top:14px;">Al aplicar, se van a <strong>agregar</strong> esas ${newOnes} figuritas nuevas a tu álbum, con el precio automático según el tipo (común/escudo/formación/especial). Nada de lo que ya tenías cargado a mano — precios, cantidades ni repetidas — se borra ni se pisa.</p>
+    <p class="import-note">${
+      newOnes > 0
+        ? `<strong>${newOnes}</strong> son nuevas para vos.`
+        : "Ya tenías cargadas todas las que trae este código."
+    }</p>
   `;
   resultModal.classList.remove("hidden");
 }
@@ -1634,6 +1648,10 @@ function applyScannedResult() {
   if (!pendingOwnedList) return;
   for (const item of pendingOwnedList) {
     setOwned(item.key, true);
+    if (item.qty > 1) {
+      const entry = getEntry(item.key);
+      if (item.qty > entry.qty) setQty(item.key, item.qty);
+    }
   }
   saveState();
   renderAll();
@@ -1658,9 +1676,11 @@ function setupScanner() {
     e.target.value = "";
   });
 
-  document.getElementById("result-close").addEventListener("click", () => {
-    resultModal.classList.add("hidden");
-    pendingOwnedList = null;
+  resultModal.addEventListener("click", (e) => {
+    if (e.target === resultModal) {
+      resultModal.classList.add("hidden");
+      pendingOwnedList = null;
+    }
   });
   document.getElementById("result-cancel").addEventListener("click", () => {
     resultModal.classList.add("hidden");
