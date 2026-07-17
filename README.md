@@ -13,6 +13,25 @@ de llevarlos a otro dispositivo que trae esta app: un **backup manual**
 (exportar/importar un archivo) o una **sincronización automática opcional**
 conectando la app a un proyecto gratis de Firebase (ver más abajo).
 
+## Secciones de la app
+
+La app está organizada en 4 pestañas, con una barra de navegación fija justo
+debajo del marcador de puntaje:
+
+- **📖 Mi Álbum** — la grilla completa de figuritas por equipo, con el
+  buscador, los precios automáticos y los filtros ("Solo faltantes", "Solo
+  repetidas").
+- **💰 Venta** — tus figuritas repetidas listas para vender (con filtros por
+  tipo: escudos, formaciones, especiales) y el acceso a **"Vender a un
+  cliente (QR)"**.
+- **📊 Estadísticas** — cuántos escudos, formaciones, especiales y repetidas
+  tenés, y el ranking de equipos de menos a más completo.
+- **⚙️ Ajustes** — sincronizar dispositivos, hacer backup y reiniciar el
+  álbum.
+
+El botón dorado **"Actualizar mi álbum"**, arriba de todo, siempre está
+visible sin importar en qué pestaña estés.
+
 ## Ver la app en tu computadora
 
 No necesitás instalar nada especial. Dos opciones:
@@ -90,7 +109,7 @@ que trae el código, con precio automático según el tipo. Nunca borra ni
 desmarca nada, así que tus precios, cantidades y repetidas cargadas a mano
 siempre quedan a salvo.
 
-**🤝 "Vender a un cliente (QR)"** (en los accesos rápidos)
+**🤝 "Vender a un cliente (QR)"** (pestaña 💰 Venta)
 Escaneás el QR **de otra persona** (un comprador/coleccionista). La app
 compara lo que esa persona ya tiene contra tus propias repetidas, y te
 muestra una lista de las figuritas que vos tenés de más y que a ella le
@@ -166,7 +185,7 @@ de ejemplo por los que copiaste. Guardá y volvé a desplegar (o refrescá si
 estás en local con `npm run dev`).
 
 **5. Activar la sincronización desde la app**
-1. Tocá **"🔗 Sincronizar dispositivos"**.
+1. Tocá **"⚙️ Ajustes" → "🔗 Sincronizar dispositivos"**.
 2. Escribí un **código de álbum** (una palabra o frase que solo vos
    conozcas, ej. `familia-gomez-mundial26`) y tocá "Guardar código".
 3. Activá el toggle **"Sincronización automática"**.
@@ -184,15 +203,15 @@ Si dos dispositivos cambian el álbum *al mismo tiempo* sin conexión, gana el
 uso normal (vos mirando el álbum en dos aparatos) esto no es un problema.
 
 Si preferís no crear una cuenta de Firebase, seguís teniendo el botón
-**"💾 Backup"** para exportar un archivo en un dispositivo e importarlo en el
+**"💾 Backup"** (pestaña ⚙️ Ajustes) para exportar un archivo en un dispositivo e importarlo en el
 otro a mano, sin necesidad de conexión ni cuentas.
 
 ## Repetidas para vender
 
 Además de marcar una figurita como "tenés", ahora podés indicar **cuántas
 copias** tenés tocando el `+`/`–` que aparece debajo del precio. A partir de
-la segunda copia, esa figurita cuenta como "repetida" y aparece en el botón
-**"🔁 Repetidas para vender"**, con:
+la segunda copia, esa figurita cuenta como "repetida" y aparece en
+la pestaña **"💰 Venta"**, con:
 
 - Un resumen de cuántas figuritas repetidas tenés en total y su valor
   estimado (según el precio automático o el que hayas puesto a mano).
@@ -211,7 +230,7 @@ la cantidad automáticamente — no hace falta ir descontando a mano.
 
 ## Backup de mis datos
 
-Como todo se guarda en el navegador (`localStorage`), botón **"💾 Backup de
+Como todo se guarda en el navegador (`localStorage`), en **⚙️ Ajustes** el botón **"💾 Backup de
 mis datos"** te deja:
 
 - **Descargar** un archivo `.json` con todo tu álbum (figuritas, cantidades,

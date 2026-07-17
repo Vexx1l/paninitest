@@ -55,61 +55,104 @@
     </div>
   </section>
 
-  <section class="quick-actions">
-    <button id="btn-scan-client" class="btn-chip btn-chip-highlight">
-      <span class="btn-chip-icon">🤝</span>
-      <span>Vender a un cliente (QR)</span>
+  <nav class="tabbar" aria-label="Secciones">
+    <button class="tab-btn" data-view="album" aria-current="page">
+      <span class="tab-icon">📖</span><span>Mi Álbum</span>
     </button>
-    <button id="btn-sync" class="btn-chip">
-      <span class="btn-chip-icon">🔗</span>
-      <span>Sincronizar dispositivos</span>
-      <span id="sync-badge" class="btn-chip-badge hidden">AUTO</span>
+    <button class="tab-btn" data-view="venta">
+      <span class="tab-icon">💰</span><span>Venta</span>
+      <span id="venta-badge" class="tab-badge hidden">0</span>
     </button>
-    <button id="btn-repeats" class="btn-chip">
-      <span class="btn-chip-icon">🔁</span>
-      <span>Repetidas para vender</span>
-      <span id="repeats-badge" class="btn-chip-badge hidden">0</span>
+    <button class="tab-btn" data-view="stats">
+      <span class="tab-icon">📊</span><span>Estadísticas</span>
     </button>
-    <button id="btn-backup" class="btn-chip">
-      <span class="btn-chip-icon">💾</span>
-      <span>Backup de mis datos</span>
+    <button class="tab-btn" data-view="settings">
+      <span class="tab-icon">⚙️</span><span>Ajustes</span>
     </button>
+  </nav>
+
+  <!-- ==================== MI ÁLBUM ==================== -->
+  <section id="view-album" class="view">
+    <section class="toolbar">
+      <div class="field-search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="search" type="text" placeholder="Buscar equipo (ej: México, ARG, Brasil...)" autocomplete="off" />
+      </div>
+      <div class="field-price-group">
+        <div class="field-price">
+          <label for="price-common">Común ($)</label>
+          <input id="price-common" type="number" min="0" step="1" inputmode="decimal" placeholder="1000" />
+        </div>
+        <div class="field-price">
+          <label for="price-premium">Escudo/Formación/Especial ($)</label>
+          <input id="price-premium" type="number" min="0" step="1" inputmode="decimal" placeholder="2000" />
+        </div>
+      </div>
+      <div class="toolbar-actions">
+        <button id="btn-missing" class="btn-ghost btn-ghost-small" data-state="off">Solo faltantes</button>
+        <button id="btn-onlyrepeats" class="btn-ghost btn-ghost-small" data-state="off">Solo repetidas</button>
+        <button id="btn-recalc-prices" class="btn-ghost btn-ghost-small">Recalcular precios</button>
+      </div>
+    </section>
+    <p class="price-legend">
+      Precio automático al marcar una figurita: <strong>común $<span id="price-legend-common">1000</span></strong>,
+      y <strong>escudo (#1), formación (#13) o especial $<span id="price-legend-premium">2000</span></strong> por equipo.
+      Podés editar el precio de cada figurita a mano tocándolo en la grilla.
+    </p>
+
+    <main id="sections" class="sections" aria-live="polite">
+      <div class="loading">Cargando álbum…</div>
+    </main>
   </section>
 
-  <section class="toolbar">
-    <div class="field-search">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-      <input id="search" type="text" placeholder="Buscar equipo (ej: México, ARG, Brasil...)" autocomplete="off" />
+  <!-- ==================== VENTA ==================== -->
+  <section id="view-venta" class="view hidden">
+    <section class="quick-actions">
+      <button id="btn-scan-client" class="btn-chip btn-chip-highlight">
+        <span class="btn-chip-icon">🤝</span>
+        <span>Vender a un cliente (QR)</span>
+      </button>
+    </section>
+    <div class="venta-filters" role="tablist" aria-label="Filtrar repetidas por tipo">
+      <button class="chip-filter" data-kind="all" data-state="on">Todas</button>
+      <button class="chip-filter" data-kind="escudo">🛡️ Escudos</button>
+      <button class="chip-filter" data-kind="formacion">📋 Formaciones</button>
+      <button class="chip-filter" data-kind="especial">⭐ Especiales</button>
     </div>
-    <div class="field-price-group">
-      <div class="field-price">
-        <label for="price-common">Común ($)</label>
-        <input id="price-common" type="number" min="0" step="1" inputmode="decimal" placeholder="1000" />
-      </div>
-      <div class="field-price">
-        <label for="price-premium">Escudo/Formación/Especial ($)</label>
-        <input id="price-premium" type="number" min="0" step="1" inputmode="decimal" placeholder="2000" />
-      </div>
-    </div>
-    <div class="toolbar-actions">
-      <button id="btn-missing" class="btn-ghost btn-ghost-small" data-state="off">Solo faltantes</button>
-      <button id="btn-onlyrepeats" class="btn-ghost btn-ghost-small" data-state="off">Solo repetidas</button>
-      <button id="btn-recalc-prices" class="btn-ghost btn-ghost-small">Recalcular precios</button>
-      <button id="btn-reset" class="btn-ghost btn-ghost-small btn-danger">Reiniciar álbum</button>
+    <div id="venta-summary" class="repeats-summary"></div>
+    <div id="venta-list" class="repeats-list"></div>
+    <div class="venta-actions">
+      <button id="venta-copy" class="btn-gold">Copiar lista para compartir</button>
     </div>
   </section>
-  <p class="price-legend">
-    Precio automático al marcar una figurita: <strong>común $<span id="price-legend-common">1000</span></strong>,
-    y <strong>escudo (#1), formación (#13) o especial $<span id="price-legend-premium">2000</span></strong> por equipo.
-    Podés editar el precio de cada figurita a mano tocándolo en la grilla.
-  </p>
 
-  <main id="sections" class="sections" aria-live="polite">
-    <div class="loading">Cargando álbum…</div>
-  </main>
+  <!-- ==================== ESTADÍSTICAS ==================== -->
+  <section id="view-stats" class="view hidden">
+    <div id="stats-cards" class="result-stat-grid stats-cards"></div>
+    <div id="stats-teams" class="stats-teams"></div>
+  </section>
+
+  <!-- ==================== AJUSTES ==================== -->
+  <section id="view-settings" class="view hidden">
+    <div class="quick-actions quick-actions-vertical">
+      <button id="btn-sync" class="btn-chip">
+        <span class="btn-chip-icon">🔗</span>
+        <span>Sincronizar dispositivos</span>
+        <span id="sync-badge" class="btn-chip-badge hidden">AUTO</span>
+      </button>
+      <button id="btn-backup" class="btn-chip">
+        <span class="btn-chip-icon">💾</span>
+        <span>Backup de mis datos</span>
+      </button>
+      <button id="btn-reset" class="btn-chip btn-chip-danger">
+        <span class="btn-chip-icon">🗑️</span>
+        <span>Reiniciar álbum</span>
+      </button>
+    </div>
+  </section>
 
   <footer class="app-footer">
-    <p>Tus datos se guardan solo en este navegador/celular. <strong>Actualizar mi álbum</strong> lee tu propio QR de la app <strong>Figuritas</strong> y agrega automáticamente lo que te falta, sin borrar nada cargado a mano. <strong>Vender a un cliente</strong> lee el QR de otra persona y te muestra, sin tocar tu álbum, cuáles de tus repetidas le podés separar.</p>
+    <p>Tus datos se guardan solo en este navegador/celular. <strong>Actualizar mi álbum</strong> lee tu propio QR de la app <strong>Figuritas</strong> y agrega automáticamente lo que te falta, sin borrar nada cargado a mano. <strong>Vender a un cliente</strong> (pestaña Venta) lee el QR de otra persona y te muestra, sin tocar tu álbum, cuáles de tus repetidas le podés separar.</p>
   </footer>
 </div>
 
@@ -153,21 +196,6 @@
     <div class="modal-actions modal-actions-stack">
       <button id="result-apply" class="btn-solid-danger btn-block">Reemplazar mi álbum</button>
       <button id="result-cancel" class="btn-ghost btn-block">Cancelar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Repeats-for-sale modal -->
-<div id="repeats-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="repeats-title">
-  <div class="modal-panel">
-    <div class="modal-head">
-      <h2 id="repeats-title">Repetidas para vender</h2>
-      <button id="repeats-close" class="btn-icon" aria-label="Cerrar">✕</button>
-    </div>
-    <div id="repeats-summary" class="repeats-summary"></div>
-    <div id="repeats-list" class="repeats-list"></div>
-    <div class="modal-actions">
-      <button id="repeats-copy" class="btn-gold">Copiar lista para compartir</button>
     </div>
   </div>
 </div>

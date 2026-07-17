@@ -33,6 +33,9 @@ let openSections = new Set(); // ids of expanded team sections
 let searchQuery = "";
 let onlyMissing = false;
 let onlyRepeats = false;
+let currentView = "album"; // "album" | "venta" | "stats" | "settings"
+let ventaFilterKind = "all"; // "all" | "escudo" | "formacion" | "especial"
+const KIND_LABEL = { escudo: "🛡️", formacion: "📋", especial: "⭐", comun: "" };
 
 // ----------------------------------------------------------------------------
 // Persistence
@@ -202,8 +205,21 @@ const el = {
   btnMissing: document.getElementById("btn-missing"),
   btnOnlyRepeats: document.getElementById("btn-onlyrepeats"),
   btnReset: document.getElementById("btn-reset"),
-  repeatsBadge: document.getElementById("repeats-badge"),
+  ventaBadge: document.getElementById("venta-badge"),
   syncBadge: document.getElementById("sync-badge"),
+  tabButtons: document.querySelectorAll(".tab-btn"),
+  views: {
+    album: document.getElementById("view-album"),
+    venta: document.getElementById("view-venta"),
+    stats: document.getElementById("view-stats"),
+    settings: document.getElementById("view-settings"),
+  },
+  ventaFilters: document.querySelectorAll(".chip-filter"),
+  ventaSummary: document.getElementById("venta-summary"),
+  ventaList: document.getElementById("venta-list"),
+  ventaCopy: document.getElementById("venta-copy"),
+  statsCards: document.getElementById("stats-cards"),
+  statsTeams: document.getElementById("stats-teams"),
 };
 
 function normalize(str) {
@@ -405,8 +421,9 @@ function renderChip(section, num) {
     saveState();
     refreshQtyUI();
     renderTeamHeaderCounts(section.id);
-    updateRepeatsBadge();
+    updateVentaBadge();
     if (onlyRepeats) renderSections();
+    if (currentView === "venta") renderVenta();
   });
   plusBtn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -415,8 +432,9 @@ function renderChip(section, num) {
     saveState();
     refreshQtyUI();
     renderTeamHeaderCounts(section.id);
-    updateRepeatsBadge();
+    updateVentaBadge();
     if (onlyRepeats) renderSections();
+    if (currentView === "venta") renderVenta();
   });
 
   stepper.appendChild(minusBtn);
@@ -437,8 +455,9 @@ function renderChip(section, num) {
     refreshQtyUI();
     renderScoreboard();
     renderTeamHeaderCounts(section.id);
-    updateRepeatsBadge();
+    updateVentaBadge();
     if (onlyMissing || onlyRepeats) renderSections(); // sticker may need to disappear from filtered view
+    if (currentView === "venta") renderVenta();
   }
 
   chip.addEventListener("click", toggle);
@@ -484,7 +503,9 @@ function escapeHtml(str) {
 function renderAll() {
   renderScoreboard();
   renderSections();
-  updateRepeatsBadge();
+  updateVentaBadge();
+  if (currentView === "venta") renderVenta();
+  if (currentView === "stats") renderStats();
 }
 
 // ----------------------------------------------------------------------------
@@ -560,9 +581,15 @@ function setupToolbar() {
 }
 
 // ----------------------------------------------------------------------------
-// Repetidas para vender
+// Repetidas para vender (pestaña "Venta")
 // ----------------------------------------------------------------------------
-function computeRepeats() {
+/**
+ * `filterKind`: "all" | "escudo" | "formacion" | "especial" — limita el
+ * listado a un tipo de figurita en particular (usado por los chips de
+ * filtro de la pestaña Venta). El precio usa el que tiene guardada la
+ * figurita, o el automático por tipo si por algún motivo no tiene uno.
+ */
+function computeRepeats(filterKind = "all") {
   const bySection = [];
   let totalExtra = 0;
   let totalValue = 0;
@@ -571,15 +598,16 @@ function computeRepeats() {
   for (const section of SECTIONS) {
     const rows = [];
     for (const num of section.stickers) {
+      const kind = stickerKind(section, num);
+      if (filterKind !== "all" && kind !== filterKind) continue;
       const entry = getEntry(stickerKey(section.id, num));
       if (entry.owned && entry.qty > 1) {
         const extra = entry.qty - 1;
+        const price = typeof entry.price === "number" ? entry.price : defaultPriceFor(section, num);
         totalExtra += extra;
-        if (typeof entry.price === "number") {
-          totalValue += extra * entry.price;
-          hasAnyPrice = true;
-        }
-        rows.push({ num, qty: entry.qty, extra, price: entry.price });
+        totalValue += extra * price;
+        hasAnyPrice = true;
+        rows.push({ num, qty: entry.qty, extra, price, kind });
       }
     }
     if (rows.length > 0) {
@@ -621,52 +649,51 @@ function computeSellToClient(clientOwnedList) {
   return { bySection, totalItems, totalValue };
 }
 
-function updateRepeatsBadge() {
-  const { totalExtra } = computeRepeats();
-  el.repeatsBadge.textContent = totalExtra;
-  el.repeatsBadge.classList.toggle("hidden", totalExtra === 0);
+function updateVentaBadge() {
+  const { totalExtra } = computeRepeats("all");
+  el.ventaBadge.textContent = totalExtra;
+  el.ventaBadge.classList.toggle("hidden", totalExtra === 0);
 }
 
-const repeatsModal = document.getElementById("repeats-modal");
-const repeatsSummary = document.getElementById("repeats-summary");
-const repeatsList = document.getElementById("repeats-list");
-
-function openRepeatsModal() {
-  const { bySection, totalExtra, totalValue, hasAnyPrice } = computeRepeats();
+function renderVenta() {
+  const { bySection, totalExtra, totalValue, hasAnyPrice } = computeRepeats(ventaFilterKind);
 
   if (bySection.length === 0) {
-    repeatsSummary.innerHTML = "";
-    repeatsList.innerHTML = `<div class="repeats-empty">Todavía no marcaste ninguna repetida.<br/>Tocá el <b>+</b> debajo del precio de una figurita que ya tenés para indicar que tenés más de una y así aparezca acá lista para vender.</div>`;
-  } else {
-    repeatsSummary.innerHTML = `
-      <div class="result-stat"><b>${totalExtra}</b><span>FIGUS PARA VENDER</span></div>
-      <div class="result-stat"><b>${hasAnyPrice ? "$" + totalValue.toLocaleString("es-AR", { maximumFractionDigits: 0 }) : "—"}</b><span>VALOR ESTIMADO</span></div>
-    `;
-    repeatsList.innerHTML = "";
-    for (const { section, rows } of bySection) {
-      const teamBlock = document.createElement("div");
-      teamBlock.className = "repeats-team";
-      const rowsHtml = rows
-        .map(
-          (r) => `
-        <div class="repeats-row">
-          <span class="repeats-row-num">#${escapeHtml(r.num)}</span>
-          <span class="repeats-row-extra">Tenés ${r.extra} para vender${
-            typeof r.price === "number" ? ` · $${r.price}` : ""
-          }</span>
-        </div>`
-        )
-        .join("");
-      teamBlock.innerHTML = `<div class="repeats-team-name">${section.emoji} ${escapeHtml(section.label)}</div>${rowsHtml}`;
-      repeatsList.appendChild(teamBlock);
-    }
+    el.ventaSummary.innerHTML = "";
+    el.ventaList.innerHTML = `<div class="repeats-empty">${
+      ventaFilterKind === "all"
+        ? "Todavía no marcaste ninguna repetida.<br/>Tocá el <b>+</b> debajo del precio de una figurita que ya tenés (en \u201cMi Álbum\u201d) para indicar que tenés más de una y así aparezca acá lista para vender."
+        : "No tenés repetidas de este tipo todavía."
+    }</div>`;
+    return;
   }
 
-  repeatsModal.classList.remove("hidden");
+  el.ventaSummary.innerHTML = `
+    <div class="result-stat"><b>${totalExtra}</b><span>FIGUS PARA VENDER</span></div>
+    <div class="result-stat"><b>${hasAnyPrice ? "$" + totalValue.toLocaleString("es-AR", { maximumFractionDigits: 0 }) : "—"}</b><span>VALOR ESTIMADO</span></div>
+  `;
+  el.ventaList.innerHTML = "";
+  for (const { section, rows } of bySection) {
+    const teamBlock = document.createElement("div");
+    teamBlock.className = "repeats-team";
+    const rowsHtml = rows
+      .map(
+        (r) => `
+      <div class="repeats-row">
+        <span class="repeats-row-num">${KIND_LABEL[r.kind] || ""} #${escapeHtml(r.num)}</span>
+        <span class="repeats-row-extra">Tenés ${r.extra} para vender${
+          typeof r.price === "number" ? ` · $${r.price.toLocaleString("es-AR")}` : ""
+        }</span>
+      </div>`
+      )
+      .join("");
+    teamBlock.innerHTML = `<div class="repeats-team-name">${section.emoji} ${escapeHtml(section.label)}</div>${rowsHtml}`;
+    el.ventaList.appendChild(teamBlock);
+  }
 }
 
 function buildRepeatsShareText() {
-  const { bySection, totalExtra } = computeRepeats();
+  const { bySection, totalExtra } = computeRepeats(ventaFilterKind);
   if (bySection.length === 0) return "";
 
   const lines = [
@@ -712,15 +739,104 @@ async function copyRepeatsList() {
   }
 }
 
-function setupRepeatsModal() {
-  document.getElementById("btn-repeats").addEventListener("click", openRepeatsModal);
-  document.getElementById("repeats-close").addEventListener("click", () => {
-    repeatsModal.classList.add("hidden");
+function setupVenta() {
+  el.ventaFilters.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      ventaFilterKind = btn.dataset.kind;
+      el.ventaFilters.forEach((b) => (b.dataset.state = b === btn ? "on" : "off"));
+      renderVenta();
+    });
   });
-  repeatsModal.addEventListener("click", (e) => {
-    if (e.target === repeatsModal) repeatsModal.classList.add("hidden");
+  el.ventaCopy.addEventListener("click", copyRepeatsList);
+}
+
+// ----------------------------------------------------------------------------
+// Estadísticas
+// ----------------------------------------------------------------------------
+function renderStats() {
+  let escudosOwned = 0,
+    escudosTotal = 0,
+    formacionesOwned = 0,
+    formacionesTotal = 0,
+    especialesOwned = 0,
+    especialesTotal = 0;
+
+  const teamRows = [];
+
+  for (const section of SECTIONS) {
+    let ownedInSection = 0;
+    for (const num of section.stickers) {
+      const kind = stickerKind(section, num);
+      const owned = getEntry(stickerKey(section.id, num)).owned;
+      if (owned) ownedInSection++;
+      if (kind === "escudo") {
+        escudosTotal++;
+        if (owned) escudosOwned++;
+      } else if (kind === "formacion") {
+        formacionesTotal++;
+        if (owned) formacionesOwned++;
+      } else if (kind === "especial") {
+        especialesTotal++;
+        if (owned) especialesOwned++;
+      }
+    }
+    if (!section.id.startsWith("FWC")) {
+      teamRows.push({
+        section,
+        owned: ownedInSection,
+        total: section.stickers.length,
+        pct: Math.round((ownedInSection / section.stickers.length) * 100),
+      });
+    }
+  }
+  teamRows.sort((a, b) => a.pct - b.pct); // los más incompletos primero
+
+  const { totalExtra, totalValue } = computeRepeats("all");
+
+  el.statsCards.innerHTML = `
+    <div class="result-stat"><b>${escudosOwned}/${escudosTotal}</b><span>ESCUDOS</span></div>
+    <div class="result-stat"><b>${formacionesOwned}/${formacionesTotal}</b><span>FORMACIONES</span></div>
+    <div class="result-stat"><b>${especialesOwned}/${especialesTotal}</b><span>ESPECIALES</span></div>
+    <div class="result-stat"><b>${totalExtra}</b><span>REPETIDAS ($${totalValue.toLocaleString("es-AR")})</span></div>
+  `;
+
+  el.statsTeams.innerHTML = `
+    <p class="stats-teams-title">Equipos — de menos a más completo</p>
+    ${teamRows
+      .map(
+        (r) => `
+      <div class="stats-team-row">
+        <span class="stats-team-name">${r.section.emoji} ${escapeHtml(r.section.label)}</span>
+        <span class="stats-team-track"><span class="stats-team-fill" style="width:${r.pct}%"></span></span>
+        <span class="stats-team-count">${r.owned}/${r.total}</span>
+      </div>`
+      )
+      .join("")}
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// Navegación por pestañas
+// ----------------------------------------------------------------------------
+function switchView(name) {
+  currentView = name;
+  for (const [key, section] of Object.entries(el.views)) {
+    section.classList.toggle("hidden", key !== name);
+  }
+  el.tabButtons.forEach((btn) => {
+    const active = btn.dataset.view === name;
+    btn.classList.toggle("active", active);
+    if (active) btn.setAttribute("aria-current", "page");
+    else btn.removeAttribute("aria-current");
   });
-  document.getElementById("repeats-copy").addEventListener("click", copyRepeatsList);
+  if (name === "venta") renderVenta();
+  if (name === "stats") renderStats();
+}
+
+function setupTabs() {
+  el.tabButtons.forEach((btn) => {
+    btn.addEventListener("click", () => switchView(btn.dataset.view));
+  });
 }
 
 // ----------------------------------------------------------------------------
@@ -1712,9 +1828,10 @@ async function init() {
   loadState();
   await loadSections();
   setupToolbar();
+  setupTabs();
+  setupVenta();
   setupScanner();
   setupSellModal();
-  setupRepeatsModal();
   setupBackupModal();
   setupSyncModal();
   initSyncOnBoot();

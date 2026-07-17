@@ -211,6 +211,130 @@ body {
   border-color: var(--gold);
 }
 .btn-chip-highlight:hover { border-color: var(--gold-bright); }
+.btn-chip-danger:hover { border-color: var(--amber); color: var(--amber); }
+
+/* ===== Tab navigation ===== */
+.tabbar {
+  margin: 4px 16px 12px;
+  display: flex;
+  gap: 6px;
+  background: var(--pitch-700);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 5px;
+}
+.tab-btn {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  padding: 8px 4px;
+  color: var(--chalk-faint);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  position: relative;
+}
+.tab-btn .tab-icon { font-size: 17px; line-height: 1; }
+.tab-btn:hover { color: var(--chalk-dim); }
+.tab-btn.active {
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  color: var(--gold-ink);
+}
+.tab-badge {
+  position: absolute;
+  top: 2px;
+  right: 10px;
+  background: var(--amber);
+  color: var(--chalk);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.tab-badge.hidden { display: none; }
+
+.view.hidden { display: none; }
+.view { padding-bottom: 8px; }
+
+/* ===== Venta tab ===== */
+.venta-filters {
+  margin: 0 16px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip-filter {
+  background: var(--pitch-700);
+  border: 1px solid var(--line);
+  color: var(--chalk-dim);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.chip-filter:hover { border-color: var(--gold); color: var(--chalk); }
+.chip-filter[data-state="on"] {
+  background: var(--gold);
+  color: var(--gold-ink);
+  border-color: var(--gold);
+}
+.venta-actions { margin: 14px 16px 0; }
+.venta-actions .btn-gold { width: 100%; }
+
+/* ===== Estadísticas tab ===== */
+.stats-cards { margin: 0 16px 16px; }
+.stats-teams { margin: 0 16px; }
+.stats-teams-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--chalk-faint);
+  margin: 0 0 10px;
+  text-transform: uppercase;
+}
+.stats-team-row {
+  display: grid;
+  grid-template-columns: 1fr 90px 52px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.stats-team-row:first-of-type { border-top: none; }
+.stats-team-name { font-size: 13px; color: var(--chalk-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stats-team-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--pitch-700);
+  overflow: hidden;
+  display: block;
+}
+.stats-team-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+}
+.stats-team-count { font-family: var(--font-mono); font-size: 12px; color: var(--chalk-faint); text-align: right; }
+
+/* ===== Ajustes tab ===== */
+.quick-actions-vertical { flex-direction: column; margin: 0 16px; }
+.quick-actions-vertical .btn-chip { flex: 1 1 auto; justify-content: flex-start; padding: 14px 14px; }
 
 /* ===== Toolbar ===== */
 .toolbar {
