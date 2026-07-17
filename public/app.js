@@ -904,33 +904,41 @@ function showToast(msg, ms = 2600) {
 // ============================================================================
 // QR decoding — Figuritas app format
 //
-// Verified format (reverse-engineered from a real export):
-//   raw text = [a few opaque header bytes] + "H4sI...base64gzip...;H4sI...base64gzip..."
-//   - Two semicolon-separated segments, each standard base64 of a gzip stream.
-//   - First segment: 123-byte bitmap, purpose not needed here (observed all-zero).
-//   - Second segment: 123-byte (984-bit) bitmap of OWNED stickers.
-//   - Bit i (0-indexed, LSB-first within each byte) corresponds to the i-th
+// Verified format (reverse-engineered from real exports):
+//   raw text = [a few opaque header bytes] + one or more ";"-separated
+//   segments, each "H4sI...base64gzip...".
+//   - The NUMBER of segments varies (2 or 3) — it is NOT fixed at 2. A naive
+//     split on the first ";" breaks as soon as a 3rd segment shows up, so we
+//     split on every ";" and decode each piece independently.
+//   - Segment 0: 123-byte bitmap, unused here (observed all-zero on real exports).
+//   - Segment 1: 123-byte (984-bit) bitmap of OWNED stickers.
+//     Bit i (0-indexed, LSB-first within each byte) corresponds to the i-th
 //     sticker in canonical album order (see sections.json), i.e.
 //     bit = (byte[i >> 3] >> (i & 7)) & 1
+//   - Segment 2 (OPTIONAL — only present when the account has repeated
+//     stickers): one byte per OWNED sticker (in the same bit order as
+//     segment 1), giving how many copies of that sticker the account has.
+//     This is what powers the "figuritas repetidas" / trade-matching QR.
 // ============================================================================
 
 function decodeFiguritasPayload(rawText) {
-  const semiIdx = rawText.indexOf(";");
-  if (semiIdx === -1) throw new Error("Formato de QR no reconocido (falta separador).");
+  const rawParts = rawText.split(";");
+  const segments = [];
+  for (const raw of rawParts) {
+    const h = raw.indexOf("H4sI");
+    if (h === -1) continue; // header junk before the first segment, or a stray empty piece
+    segments.push(inflateBase64(raw.slice(h).trim()));
+  }
 
-  let part1 = rawText.slice(0, semiIdx);
-  let part2 = rawText.slice(semiIdx + 1);
-
-  const h1 = part1.indexOf("H4sI");
-  const h2 = part2.indexOf("H4sI");
-  if (h1 === -1 || h2 === -1) {
+  if (segments.length < 2) {
     throw new Error("Este QR no parece ser de la app Figuritas.");
   }
-  part1 = part1.slice(h1).trim();
-  part2 = part2.slice(h2).trim();
 
-  const bitmapOwned = inflateBase64(part2);
-  return { ownedBytes: bitmapOwned };
+  // Segment 0 is header/unused padding, segment 1 is the owned-stickers
+  // bitmap, and an optional segment 2 carries per-sticker repeat counts.
+  const ownedBytes = segments[1];
+  const repeatBytes = segments.length >= 3 ? segments[2] : null;
+  return { ownedBytes, repeatBytes };
 }
 
 function inflateBase64(b64) {
@@ -947,14 +955,22 @@ function bitAt(bytes, index) {
   return (byte >> (index & 7)) & 1;
 }
 
-/** Returns array of {sectionId, num, key} for owned stickers per the scanned bitmap */
-function ownedListFromBitmap(bytes) {
+/**
+ * Returns array of {sectionId, num, key, qty} for owned stickers per the
+ * scanned bitmap. When repeatBytes is provided, qty is how many copies the
+ * scanned account has of that sticker (1 = no repeats); otherwise qty is
+ * always 1, since older/simpler QR codes don't carry repeat info.
+ */
+function ownedListFromBitmap(bytes, repeatBytes) {
   const owned = [];
   let i = 0;
+  let ownedIndex = 0; // position among owned stickers only, matches repeatBytes order
   for (const section of SECTIONS) {
     for (const num of section.stickers) {
       if (bitAt(bytes, i) === 1) {
-        owned.push({ sectionId: section.id, num, key: stickerKey(section.id, num) });
+        const qty = repeatBytes && repeatBytes[ownedIndex] ? repeatBytes[ownedIndex] : 1;
+        owned.push({ sectionId: section.id, num, key: stickerKey(section.id, num), qty });
+        ownedIndex++;
       }
       i++;
     }
@@ -1200,8 +1216,8 @@ function handleScannedFile(file) {
 
 function handleScannedText(text) {
   try {
-    const { ownedBytes } = decodeFiguritasPayload(text);
-    pendingOwnedList = ownedListFromBitmap(ownedBytes);
+    const { ownedBytes, repeatBytes } = decodeFiguritasPayload(text);
+    pendingOwnedList = ownedListFromBitmap(ownedBytes, repeatBytes);
     if (navigator.vibrate) navigator.vibrate(60); // quick haptic confirmation of a successful read
     stopCamera();
     scannerModal.classList.add("hidden");
@@ -1220,17 +1236,60 @@ function handleScannedText(text) {
 }
 
 function showResultPreview(ownedList) {
-  const total = totalStickerCount();
   let newOnes = 0;
   for (const item of ownedList) {
     if (!getEntry(item.key).owned) newOnes++;
   }
+
+  // Trade matching: stickers THEY have repeated that YOU don't own at all
+  // (you could get these from them), and stickers YOU have repeated that
+  // THEY don't own at all (you could offer these to them).
+  const theyOfferYou = ownedList.filter((item) => item.qty > 1 && !getEntry(item.key).owned);
+  const scannedKeys = new Set(ownedList.map((item) => item.key));
+  const youOfferThem = [];
+  for (const section of SECTIONS) {
+    for (const num of section.stickers) {
+      const key = stickerKey(section.id, num);
+      const entry = getEntry(key);
+      if (entry.owned && entry.qty > 1 && !scannedKeys.has(key)) {
+        youOfferThem.push({ sectionId: section.id, num, key });
+      }
+    }
+  }
+  const hasRepeatData = ownedList.some((item) => item.qty > 1);
+
+  const tradeSection = hasRepeatData
+    ? `
+    <div class="result-trade">
+      <p style="margin-top:14px;"><strong>Para intercambiar:</strong></p>
+      <div class="result-stat-grid">
+        <div class="result-stat"><b>${theyOfferYou.length}</b><span>TE PUEDEN DAR</span></div>
+        <div class="result-stat"><b>${youOfferThem.length}</b><span>LES PODÉS DAR</span></div>
+      </div>
+      ${
+        theyOfferYou.length
+          ? `<p class="result-trade-list">Te faltan y las tienen repetidas: ${theyOfferYou
+              .map((i) => `#${escapeHtml(i.num)}`)
+              .join(", ")}</p>`
+          : ""
+      }
+      ${
+        youOfferThem.length
+          ? `<p class="result-trade-list">Vos las tenés repetidas y a ellos les faltan: ${youOfferThem
+              .map((i) => `#${escapeHtml(i.num)}`)
+              .join(", ")}</p>`
+          : ""
+      }
+    </div>`
+    : `<p style="margin-top:14px;color:var(--muted, #888);">Este QR no trae info de repetidas, así que no puedo mostrarte posibles intercambios (solo sirve para copiar progreso).</p>`;
+
   resultBody.innerHTML = `
     <p>El código trae <strong>${ownedList.length}</strong> figuritas distintas marcadas como tuyas en la app Figuritas.</p>
     <div class="result-stat-grid">
       <div class="result-stat"><b>${ownedList.length}</b><span>EN EL QR</span></div>
       <div class="result-stat"><b>${newOnes}</b><span>NUEVAS PARA VOS</span></div>
     </div>
+    ${tradeSection}
     <p style="margin-top:14px;">Al aplicar, se van a <strong>agregar</strong> esas ${newOnes} figuritas nuevas a tu álbum (con el precio por defecto si configuraste uno). Nada de lo que ya tenías cargado a mano — precios, ni tus repetidas — se borra o se pisa.</p>
   `;
   resultModal.classList.remove("hidden");
