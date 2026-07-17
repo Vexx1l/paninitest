@@ -19,4 +19,5 @@ export const firebaseConfig = {
   storageBucket: "panini-22661.firebasestorage.app",
   messagingSenderId: "1013444742083",
   appId: "1:1013444742083:web:1983ab2f44f8b150434b76",
+  measurementId: "G-YFNL2ENDGV"
 };
