@@ -44,23 +44,62 @@ También podés hacerlo desde la terminal, parado en esta carpeta:
 npx vercel
 ```
 
+## Precios automáticos
+
+Al marcar una figurita como tuya, la app le pone un precio automático según
+el tipo:
+
+- **Escudo** (figurita #1 de cada equipo), **formación** (figurita #13 de
+  cada equipo) y **especiales** (sección "Especiales" — trofeo, sedes,
+  historia): **$2000**.
+- El resto de las figuritas: **$1000**.
+
+Ambos montos son editables desde la barra de herramientas ("Común" y
+"Escudo/Formación/Especial"), por si cambian los precios que manejás. El
+botón **"Recalcular precios"** vuelve a aplicar la regla a todas tus
+figuritas ya marcadas (útil si cambiaste los montos o corregiste algo a
+mano y querés que todo quede consistente de nuevo). También podés seguir
+editando el precio de una figurita puntual a mano, tocando el campo `$`
+debajo de su número — eso no se pisa solo, salvo que uses "Recalcular
+precios".
+
 ## Cómo funciona el lector de QR
 
 La app **Figuritas** codifica el álbum de cada usuario como un texto con dos
-bloques comprimidos (gzip + base64) separados por `;`. El segundo bloque es
-un mapa de bits: cada figurita del álbum tiene una posición fija (en el mismo
-orden que aparece en `public/sections.json`), y un bit en `1` significa "la
-tengo". Esta app decodifica ese mapa de bits con la cámara (usando `jsQR` y
-`pako`, ambas cargadas desde CDN) y marca automáticamente esas figuritas como
-tuyas, sin tocar los precios que ya cargaste.
+o tres bloques comprimidos (gzip + base64) separados por `;`. Uno de esos
+bloques es un mapa de bits: cada figurita del álbum tiene una posición fija
+(en el mismo orden que aparece en `public/sections.json`), y un bit en `1`
+significa "la tengo". Esta app decodifica ese mapa de bits con la cámara
+(usando `jsQR` y `pako`, ambas cargadas desde CDN) y, según el modo elegido,
+lo usa para actualizar tu álbum o para calcular qué le podés vender a otra
+persona (ver siguiente sección).
 
 Si en algún momento la app Figuritas cambia el formato de su QR, el lector
 puede dejar de funcionar — en ese caso seguís pudiendo cargar todo a mano
 desde la grilla de figuritas.
 
-Nota importante: el escaneo de QR solo **agrega** figuritas nuevas a tu álbum;
-nunca borra ni desmarca nada, así que tus precios y repetidas cargadas a mano
+### Dos modos de escaneo
+
+Hay dos botones distintos porque el QR de la app Figuritas se ve igual sea
+tu propio código o el de otra persona — la app no tiene forma de saber de
+quién es, así que elegís vos la intención tocando el botón correcto:
+
+**📷 "Actualizar mi álbum"** (arriba a la derecha)
+Escaneás **tu propio** QR. La app **agrega** a tu álbum las figuritas nuevas
+que trae el código, con precio automático según el tipo. Nunca borra ni
+desmarca nada, así que tus precios, cantidades y repetidas cargadas a mano
 siempre quedan a salvo.
+
+**🤝 "Vender a un cliente (QR)"** (en los accesos rápidos)
+Escaneás el QR **de otra persona** (un comprador/coleccionista). La app
+compara lo que esa persona ya tiene contra tus propias repetidas, y te
+muestra una lista de las figuritas que vos tenés de más y que a ella le
+faltan — listas para separar y vender, con el precio de cada una y el total
+a cobrar. Podés destildar las que finalmente no vendas, copiar la lista para
+mandarla por WhatsApp, y tocar **"Confirmar venta"** para que la app reste 1
+del stock de cada figurita vendida. **Este modo nunca modifica tu álbum de
+figuritas que tenés/te faltan** — solo tu cantidad de repetidas al confirmar
+una venta.
 
 ### Mejoras del lector (estabilidad)
 
@@ -156,22 +195,27 @@ la segunda copia, esa figurita cuenta como "repetida" y aparece en el botón
 **"🔁 Repetidas para vender"**, con:
 
 - Un resumen de cuántas figuritas repetidas tenés en total y su valor
-  estimado (según el precio que cargaste).
+  estimado (según el precio automático o el que hayas puesto a mano).
 - El listado agrupado por equipo, con cuántas te sobran de cada una.
 - Un botón **"Copiar lista para compartir"** que arma un texto listo para
   pegar en WhatsApp o donde quieras, para ofrecerlas a otros coleccionistas.
 
-Importante: el escaneo de QR de la app Figuritas **no** trae información de
-cuántas copias tenés de cada figurita (solo si la tenés o no), así que la
-cantidad/repetidas siempre se carga a mano.
+Importante: el escaneo de tu propio QR **no** trae información de cuántas
+copias tenés de cada figurita (solo si la tenés o no), así que la
+cantidad/repetidas siempre se carga a mano con el `+`/`–`.
+
+Cuando ya estás en persona con un comprador, usá en cambio **"🤝 Vender a un
+cliente (QR)"** (ver arriba): leyendo el QR de esa persona, la app filtra
+sola cuáles de tus repetidas le sirven a ella, y al confirmar la venta resta
+la cantidad automáticamente — no hace falta ir descontando a mano.
 
 ## Backup de mis datos
 
 Como todo se guarda en el navegador (`localStorage`), botón **"💾 Backup de
 mis datos"** te deja:
 
-- **Descargar** un archivo `.json` con todo tu álbum (figuritas, precios,
-  repetidas y precio por defecto).
+- **Descargar** un archivo `.json` con todo tu álbum (figuritas, cantidades,
+  repetidas y los precios común/premium configurados).
 - **Restaurar** ese archivo más adelante, incluso desde otro navegador o
   celular, si perdiste los datos o cambiaste de dispositivo.
 
