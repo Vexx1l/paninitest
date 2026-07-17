@@ -1,0 +1,9 @@
+{
+  "name": "album-mundial-2026",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Control de figuritas del Mundial 2026 con lectura de QR de la app Figuritas.",
+  "scripts": {
+    "dev": "npx serve public -l 3000"
+  }
+}
