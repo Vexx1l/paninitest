@@ -1614,16 +1614,14 @@ function handleScannedText(text) {
 }
 
 function showResultPreview(ownedList) {
-  let newOnes = 0;
   let totalRepeatUnits = 0; // extra copies beyond the 1st, per sticker (from the QR's repeat data, if any)
   for (const item of ownedList) {
-    if (!getEntry(item.key).owned) newOnes++;
     if (item.qty > 1) totalRepeatUnits += item.qty - 1;
   }
 
   resultBody.innerHTML = `
-    <p class="import-warn">Vamos a <strong>agregar</strong> las figuritas nuevas de este código a tu álbum. Nada de lo que ya tenías cargado a mano — precios, cantidades ni repetidas — se borra ni se pisa.</p>
-    <p class="import-stats-caption">El código trae</p>
+    <p class="import-warn">Importar este álbum <strong>reemplazará el actual</strong>. Ten cuidado.</p>
+    <p class="import-stats-caption">El álbum importado contiene</p>
     <div class="import-stats-card">
       <div class="import-stat-cell">
         <div class="import-stat-value">${ownedList.length.toLocaleString("es-AR")}</div>
@@ -1635,28 +1633,34 @@ function showResultPreview(ownedList) {
         <div class="import-stat-label">Repetidas</div>
       </div>
     </div>
-    <p class="import-note">${
-      newOnes > 0
-        ? `<strong>${newOnes}</strong> son nuevas para vos.`
-        : "Ya tenías cargadas todas las que trae este código."
-    }</p>
   `;
   resultModal.classList.remove("hidden");
 }
 
 function applyScannedResult() {
   if (!pendingOwnedList) return;
+
+  // Full replace: the imported album takes over completely, so we start
+  // from a clean slate instead of merging with whatever was there before.
+  state = {};
+  let totalRepeatUnits = 0;
   for (const item of pendingOwnedList) {
     setOwned(item.key, true);
     if (item.qty > 1) {
-      const entry = getEntry(item.key);
-      if (item.qty > entry.qty) setQty(item.key, item.qty);
+      setQty(item.key, item.qty);
+      totalRepeatUnits += item.qty - 1;
     }
   }
+
+  // Auto-price every owned sticker (including the freshly-marked repeats) so
+  // the estimated value is driven by the repetidas we just marked, right away
+  // — not left blank until the user prices each one by hand.
+  recalcAllPrices(true);
+
   saveState();
   renderAll();
   resultModal.classList.add("hidden");
-  showToast(`Álbum actualizado: ${pendingOwnedList.length} figuritas`);
+  showToast(`Álbum importado: ${pendingOwnedList.length} pegadas, ${totalRepeatUnits} repetidas`);
   pendingOwnedList = null;
 }
 

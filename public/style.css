@@ -101,6 +101,26 @@ body {
 .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(227, 179, 65, 0.45); }
 .btn-gold:active { transform: translateY(0); }
 
+.btn-solid-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #d94a3f, #b7362c);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(183, 54, 44, 0.4), inset 0 1px 0 rgba(255,255,255,0.18);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-solid-danger:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(183, 54, 44, 0.5); }
+.btn-solid-danger:active { transform: translateY(0); }
+
 /* ===== Scoreboard (signature element) ===== */
 .scoreboard {
   margin: 4px 16px 18px;
@@ -720,7 +740,7 @@ body {
   gap: 10px;
   margin-top: 16px;
 }
-.modal-actions .btn-ghost, .modal-actions .btn-gold { flex: 1; justify-content: center; }
+.modal-actions .btn-ghost, .modal-actions .btn-gold, .modal-actions .btn-solid-danger { flex: 1; justify-content: center; }
 
 /* ===== Import sheet (own-QR "Importar álbum" confirmation) ===== */
 .modal-sheet-panel { padding-top: 10px; }
