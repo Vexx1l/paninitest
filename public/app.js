@@ -651,7 +651,7 @@ function openRepeatsModal() {
           (r) => `
         <div class="repeats-row">
           <span class="repeats-row-num">#${escapeHtml(r.num)}</span>
-          <span class="repeats-row-extra">tenés ${r.qty} · ${r.extra} para vender${
+          <span class="repeats-row-extra">Tenés ${r.extra} para vender${
             typeof r.price === "number" ? ` · $${r.price}` : ""
           }</span>
         </div>`
@@ -1223,21 +1223,27 @@ function showToast(msg, ms = 2600) {
 // ============================================================================
 // QR decoding — Figuritas app format
 //
-// Verified format (reverse-engineered from real exports):
+// Verified format (reverse-engineered from a real export, decoded byte-for-
+// byte with this app's own jsQR/pako to confirm against the official app's
+// numbers):
 //   raw text = [a few opaque header bytes] + one or more ";"-separated
 //   segments, each "H4sI...base64gzip...".
 //   - The NUMBER of segments varies (2 or 3) — it is NOT fixed at 2. A naive
 //     split on the first ";" breaks as soon as a 3rd segment shows up, so we
 //     split on every ";" and decode each piece independently.
-//   - Segment 0: 123-byte bitmap, unused here (observed all-zero on real exports).
-//   - Segment 1: 123-byte (984-bit) bitmap of OWNED stickers.
-//     Bit i (0-indexed, LSB-first within each byte) corresponds to the i-th
-//     sticker in canonical album order (see sections.json), i.e.
-//     bit = (byte[i >> 3] >> (i & 7)) & 1
-//   - Segment 2 (OPTIONAL — only present when the account has repeated
-//     stickers): one byte per OWNED sticker (in the same bit order as
-//     segment 1), giving how many copies of that sticker the account has.
-//     This is what powers the "figuritas repetidas" / trade-matching QR.
+//   - Segment 0: 123-byte (984-bit) bitmap of MISSING stickers — bit=1 means
+//     you DON'T have it. "Pegadas" = total stickers in the album minus the
+//     number of 1-bits here. (On a real export: 3 missing bits → 980-3=977
+//     pegadas, exactly matching the official app.)
+//   - Segment 1: 123-byte (984-bit) bitmap of REPEATED stickers — bit=1 means
+//     you own MORE THAN ONE of it. Same bit order as segment 0:
+//     bit = (byte[i >> 3] >> (i & 7)) & 1, i-th sticker in canonical album
+//     order (see sections.json).
+//   - Segment 2 (OPTIONAL — only present when segment 1 has at least one bit
+//     set): one byte per REPEATED sticker (in the same bit order as
+//     segment 1, i.e. indexed by position among the 1-bits of segment 1, NOT
+//     by overall sticker index), giving how many EXTRA copies (beyond the
+//     first) you have of that sticker — this is the number "para vender".
 // ============================================================================
 
 function decodeFiguritasPayload(rawText) {
@@ -1253,11 +1259,10 @@ function decodeFiguritasPayload(rawText) {
     throw new Error("Este QR no parece ser de la app Figuritas.");
   }
 
-  // Segment 0 is header/unused padding, segment 1 is the owned-stickers
-  // bitmap, and an optional segment 2 carries per-sticker repeat counts.
-  const ownedBytes = segments[1];
-  const repeatBytes = segments.length >= 3 ? segments[2] : null;
-  return { ownedBytes, repeatBytes };
+  const missingBytes = segments[0];
+  const repeatedBytes = segments[1];
+  const repeatCounts = segments.length >= 3 ? segments[2] : null;
+  return { missingBytes, repeatedBytes, repeatCounts };
 }
 
 function inflateBase64(b64) {
@@ -1275,22 +1280,29 @@ function bitAt(bytes, index) {
 }
 
 /**
- * Returns array of {sectionId, num, key, qty} for owned stickers per the
- * scanned bitmap. When repeatBytes is provided, qty is how many copies the
- * scanned account has of that sticker (1 = no repeats); otherwise qty is
- * always 1, since older/simpler QR codes don't carry repeat info.
+ * Returns array of {sectionId, num, key, qty} for every sticker the scanned
+ * account OWNS — i.e. every sticker NOT flagged in the missing bitmap. qty
+ * is the TOTAL copies (1 = no repeats); for stickers flagged in the repeated
+ * bitmap, qty = 1 + the matching extra-copies byte from repeatCounts (or a
+ * single extra copy if that segment is absent for some reason).
  */
-function ownedListFromBitmap(bytes, repeatBytes) {
+function ownedListFromBitmap(missingBytes, repeatedBytes, repeatCounts) {
   const owned = [];
   let i = 0;
-  let ownedIndex = 0; // position among owned stickers only, matches repeatBytes order
+  let repeatedIndex = 0; // position among repeated stickers only, matches repeatCounts order
   for (const section of SECTIONS) {
     for (const num of section.stickers) {
-      if (bitAt(bytes, i) === 1) {
-        const qty = repeatBytes && repeatBytes[ownedIndex] ? repeatBytes[ownedIndex] : 1;
+      const isMissing = bitAt(missingBytes, i) === 1;
+      const isRepeated = repeatedBytes ? bitAt(repeatedBytes, i) === 1 : false;
+      if (!isMissing) {
+        let qty = 1;
+        if (isRepeated) {
+          const extra = repeatCounts && repeatCounts[repeatedIndex] != null ? repeatCounts[repeatedIndex] : 1;
+          qty = extra + 1;
+        }
         owned.push({ sectionId: section.id, num, key: stickerKey(section.id, num), qty });
-        ownedIndex++;
       }
+      if (isRepeated) repeatedIndex++;
       i++;
     }
   }
@@ -1584,17 +1596,17 @@ function handleScannedFile(file) {
 
 function handleScannedText(text) {
   try {
-    const { ownedBytes, repeatBytes } = decodeFiguritasPayload(text);
+    const { missingBytes, repeatedBytes, repeatCounts } = decodeFiguritasPayload(text);
     if (scanMode === "client") {
       // A client's QR only tells us which stickers THEY own — we compare
       // that against OUR repeats. We never touch our own album here.
-      const clientOwnedList = ownedListFromBitmap(ownedBytes, null);
+      const clientOwnedList = ownedListFromBitmap(missingBytes, repeatedBytes, repeatCounts);
       if (navigator.vibrate) navigator.vibrate(60);
       stopCamera();
       scannerModal.classList.add("hidden");
       showSellPreview(clientOwnedList);
     } else {
-      pendingOwnedList = ownedListFromBitmap(ownedBytes, repeatBytes);
+      pendingOwnedList = ownedListFromBitmap(missingBytes, repeatedBytes, repeatCounts);
       showResultPreview(pendingOwnedList); // build & show the preview first
       if (navigator.vibrate) navigator.vibrate(60); // quick haptic confirmation of a successful read
       stopCamera();
