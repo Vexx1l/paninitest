@@ -34,7 +34,7 @@
     </div>
     <button id="btn-scan" class="btn-gold">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M3 12h18"/></svg>
-      Escanear QR
+      Actualizar mi álbum
     </button>
   </header>
 
@@ -56,6 +56,10 @@
   </section>
 
   <section class="quick-actions">
+    <button id="btn-scan-client" class="btn-chip btn-chip-highlight">
+      <span class="btn-chip-icon">🤝</span>
+      <span>Vender a un cliente (QR)</span>
+    </button>
     <button id="btn-sync" class="btn-chip">
       <span class="btn-chip-icon">🔗</span>
       <span>Sincronizar dispositivos</span>
@@ -77,23 +81,35 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       <input id="search" type="text" placeholder="Buscar equipo (ej: México, ARG, Brasil...)" autocomplete="off" />
     </div>
-    <div class="field-price">
-      <label for="default-price">Precio x figu ($)</label>
-      <input id="default-price" type="number" min="0" step="1" inputmode="decimal" placeholder="0" />
+    <div class="field-price-group">
+      <div class="field-price">
+        <label for="price-common">Común ($)</label>
+        <input id="price-common" type="number" min="0" step="1" inputmode="decimal" placeholder="1000" />
+      </div>
+      <div class="field-price">
+        <label for="price-premium">Escudo/Formación/Especial ($)</label>
+        <input id="price-premium" type="number" min="0" step="1" inputmode="decimal" placeholder="2000" />
+      </div>
     </div>
     <div class="toolbar-actions">
       <button id="btn-missing" class="btn-ghost btn-ghost-small" data-state="off">Solo faltantes</button>
       <button id="btn-onlyrepeats" class="btn-ghost btn-ghost-small" data-state="off">Solo repetidas</button>
+      <button id="btn-recalc-prices" class="btn-ghost btn-ghost-small">Recalcular precios</button>
       <button id="btn-reset" class="btn-ghost btn-ghost-small btn-danger">Reiniciar álbum</button>
     </div>
   </section>
+  <p class="price-legend">
+    Precio automático al marcar una figurita: <strong>común $<span id="price-legend-common">1000</span></strong>,
+    y <strong>escudo (#1), formación (#13) o especial $<span id="price-legend-premium">2000</span></strong> por equipo.
+    Podés editar el precio de cada figurita a mano tocándolo en la grilla.
+  </p>
 
   <main id="sections" class="sections" aria-live="polite">
     <div class="loading">Cargando álbum…</div>
   </main>
 
   <footer class="app-footer">
-    <p>Tus datos se guardan solo en este navegador/celular. El escaneo de QR lee el formato de la app <strong>Figuritas</strong> y agrega automáticamente las figuritas que marca como tuyas, sin borrar ni pisar las que ya tenías cargadas a mano.</p>
+    <p>Tus datos se guardan solo en este navegador/celular. <strong>Actualizar mi álbum</strong> lee tu propio QR de la app <strong>Figuritas</strong> y agrega automáticamente lo que te falta, sin borrar nada cargado a mano. <strong>Vender a un cliente</strong> lee el QR de otra persona y te muestra, sin tocar tu álbum, cuáles de tus repetidas le podés separar.</p>
   </footer>
 </div>
 
@@ -151,6 +167,27 @@
     <div id="repeats-list" class="repeats-list"></div>
     <div class="modal-actions">
       <button id="repeats-copy" class="btn-gold">Copiar lista para compartir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sell-to-client modal (reading someone else's QR) -->
+<div id="sell-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="sell-title">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2 id="sell-title">Le podés vender esto</h2>
+      <button id="sell-close" class="btn-icon" aria-label="Cerrar">✕</button>
+    </div>
+    <p class="backup-text">
+      Comparamos lo que este cliente ya tiene contra tus figuritas repetidas.
+      Dejá tildadas las que efectivamente le vas a separar y confirmá la
+      venta al final — eso resta 1 de tu stock de cada una.
+    </p>
+    <div id="sell-summary" class="repeats-summary"></div>
+    <div id="sell-list" class="repeats-list"></div>
+    <div class="modal-actions">
+      <button id="sell-copy" class="btn-ghost">Copiar lista</button>
+      <button id="sell-confirm" class="btn-gold">Confirmar venta</button>
     </div>
   </div>
 </div>

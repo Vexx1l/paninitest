@@ -16,7 +16,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const STORAGE_KEY = "figuritas-album-v1";
-const DEFAULT_PRICE_KEY = "figuritas-default-price-v1";
+// Precio automático por tipo de figurita: las comunes valen PRICE_COMMON y
+// los escudos (#1 de cada equipo), formaciones (#13 de cada equipo) y las
+// especiales (sección "FWC*") valen PRICE_PREMIUM. Ambos son editables desde
+// la barra de herramientas; esto es solo el valor por defecto.
+const PRICE_COMMON_KEY = "figuritas-price-common-v1";
+const PRICE_PREMIUM_KEY = "figuritas-price-premium-v1";
 
 /** @type {Array<{id:string, code:string, emoji:string, label:string, stickers:string[]}>} */
 let SECTIONS = [];
@@ -66,8 +71,8 @@ function setOwned(key, owned) {
   const entry = getEntry(key);
   entry.owned = owned;
   if (owned && (entry.price === null || entry.price === undefined)) {
-    const def = getDefaultPrice();
-    if (def !== null) entry.price = def;
+    const { section, num } = sectionAndNumFromKey(key);
+    entry.price = section ? defaultPriceFor(section, num) : getCommonPrice();
   }
   if (owned && !entry.qty) entry.qty = 1;
   state[key] = entry;
@@ -86,11 +91,88 @@ function setQty(key, qty) {
   state[key] = entry;
 }
 
-function getDefaultPrice() {
-  const v = localStorage.getItem(DEFAULT_PRICE_KEY);
-  if (v === null || v === "") return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
+// ----------------------------------------------------------------------------
+// Precios automáticos por tipo de figurita
+// ----------------------------------------------------------------------------
+function getCommonPrice() {
+  const v = Number(localStorage.getItem(PRICE_COMMON_KEY));
+  return Number.isFinite(v) && v >= 0 ? v : 1000;
+}
+
+function getPremiumPrice() {
+  const v = Number(localStorage.getItem(PRICE_PREMIUM_KEY));
+  return Number.isFinite(v) && v >= 0 ? v : 2000;
+}
+
+/**
+ * "escudo" = figurita #1 de un equipo, "formacion" = figurita #13 de un
+ * equipo, "especial" = cualquier figurita de una sección "FWC*" (trofeo,
+ * sedes, historia), "comun" = todo el resto.
+ */
+function stickerKind(section, num) {
+  if (!section) return "comun";
+  if (section.id.startsWith("FWC")) return "especial";
+  if (num === "1") return "escudo";
+  if (num === "13") return "formacion";
+  return "comun";
+}
+
+function kindLabel(kind) {
+  switch (kind) {
+    case "escudo":
+      return "Escudo";
+    case "formacion":
+      return "Formación";
+    case "especial":
+      return "Especial";
+    default:
+      return "";
+  }
+}
+
+function defaultPriceFor(section, num) {
+  return stickerKind(section, num) === "comun" ? getCommonPrice() : getPremiumPrice();
+}
+
+function refreshPriceLegend() {
+  const legendCommon = document.getElementById("price-legend-common");
+  const legendPremium = document.getElementById("price-legend-premium");
+  if (legendCommon) legendCommon.textContent = getCommonPrice().toLocaleString("es-AR");
+  if (legendPremium) legendPremium.textContent = getPremiumPrice().toLocaleString("es-AR");
+}
+
+function sectionAndNumFromKey(key) {
+  const idx = key.lastIndexOf("#");
+  const sectionId = key.slice(0, idx);
+  const num = key.slice(idx + 1);
+  const section = SECTIONS.find((s) => s.id === sectionId);
+  return { section, num };
+}
+
+/**
+ * Reaplica el precio automático (según el tipo de figurita) a todas las
+ * figuritas marcadas como tuyas. Si `onlyEmpty` es true, solo completa las
+ * que no tienen precio cargado; si es false, pisa también las que ya tenían
+ * un precio puesto a mano.
+ */
+function recalcAllPrices(onlyEmpty) {
+  let changed = 0;
+  for (const section of SECTIONS) {
+    for (const num of section.stickers) {
+      const key = stickerKey(section.id, num);
+      const entry = getEntry(key);
+      if (!entry.owned) continue;
+      const hasPrice = typeof entry.price === "number";
+      if (onlyEmpty && hasPrice) continue;
+      const price = defaultPriceFor(section, num);
+      if (entry.price !== price) {
+        entry.price = price;
+        state[key] = entry;
+        changed++;
+      }
+    }
+  }
+  return changed;
 }
 
 // ----------------------------------------------------------------------------
@@ -115,7 +197,8 @@ const el = {
   scorePercent: document.getElementById("score-percent"),
   scoreMoney: document.getElementById("score-money"),
   search: document.getElementById("search"),
-  defaultPrice: document.getElementById("default-price"),
+  priceCommon: document.getElementById("price-common"),
+  pricePremium: document.getElementById("price-premium"),
   btnMissing: document.getElementById("btn-missing"),
   btnOnlyRepeats: document.getElementById("btn-onlyrepeats"),
   btnReset: document.getElementById("btn-reset"),
@@ -261,6 +344,14 @@ function renderChip(section, num) {
   numEl.textContent = num;
   chip.appendChild(numEl);
 
+  const kind = stickerKind(section, num);
+  if (kind !== "comun") {
+    const kindEl = document.createElement("div");
+    kindEl.className = `chip-kind chip-kind-${kind}`;
+    kindEl.textContent = kindLabel(kind);
+    chip.appendChild(kindEl);
+  }
+
   const priceInput = document.createElement("input");
   priceInput.className = "chip-price";
   priceInput.type = "number";
@@ -405,10 +496,29 @@ function setupToolbar() {
     renderSections();
   });
 
-  const savedDefault = localStorage.getItem(DEFAULT_PRICE_KEY);
-  if (savedDefault !== null) el.defaultPrice.value = savedDefault;
-  el.defaultPrice.addEventListener("change", () => {
-    localStorage.setItem(DEFAULT_PRICE_KEY, el.defaultPrice.value);
+  el.priceCommon.value = getCommonPrice();
+  el.pricePremium.value = getPremiumPrice();
+  refreshPriceLegend();
+  el.priceCommon.addEventListener("change", () => {
+    const v = Number(el.priceCommon.value);
+    localStorage.setItem(PRICE_COMMON_KEY, Number.isFinite(v) && v >= 0 ? v : 1000);
+    refreshPriceLegend();
+  });
+  el.pricePremium.addEventListener("change", () => {
+    const v = Number(el.pricePremium.value);
+    localStorage.setItem(PRICE_PREMIUM_KEY, Number.isFinite(v) && v >= 0 ? v : 2000);
+    refreshPriceLegend();
+  });
+
+  document.getElementById("btn-recalc-prices").addEventListener("click", () => {
+    const ok = confirm(
+      "Esto va a volver a poner el precio automático (común/premium) en TODAS tus figuritas marcadas, incluso las que ya tenían un precio distinto puesto a mano. ¿Seguir?"
+    );
+    if (!ok) return;
+    const changed = recalcAllPrices(false);
+    saveState();
+    renderAll();
+    showToast(changed > 0 ? `Precios actualizados en ${changed} figuritas` : "No había nada para actualizar");
   });
 
   el.btnMissing.addEventListener("click", () => {
@@ -478,6 +588,37 @@ function computeRepeats() {
   }
 
   return { bySection, totalExtra, totalValue, hasAnyPrice };
+}
+
+/**
+ * Given the list of stickers a CLIENT owns (decoded from their QR), returns
+ * which of YOUR repeated stickers you could sell/separate for them: things
+ * you have more than one of, that they don't have at all yet.
+ */
+function computeSellToClient(clientOwnedList) {
+  const clientSet = new Set(clientOwnedList.map((i) => i.key));
+  const bySection = [];
+  let totalItems = 0;
+  let totalValue = 0;
+
+  for (const section of SECTIONS) {
+    const rows = [];
+    for (const num of section.stickers) {
+      const key = stickerKey(section.id, num);
+      const entry = getEntry(key);
+      if (entry.owned && entry.qty > 1 && !clientSet.has(key)) {
+        const price =
+          typeof entry.price === "number" ? entry.price : defaultPriceFor(section, num);
+        const kind = stickerKind(section, num);
+        rows.push({ key, num, price, kind, availableExtra: entry.qty - 1 });
+        totalItems++;
+        totalValue += price;
+      }
+    }
+    if (rows.length > 0) bySection.push({ section, rows });
+  }
+
+  return { bySection, totalItems, totalValue };
 }
 
 function updateRepeatsBadge() {
@@ -583,6 +724,172 @@ function setupRepeatsModal() {
 }
 
 // ----------------------------------------------------------------------------
+// Vender a un cliente (leyendo SU QR)
+//
+// Al leer el QR de otra persona, comparamos lo que ella tiene contra
+// nuestras propias repetidas: cualquier figurita que nosotros tengamos de
+// más (qty > 1) y que ella no tenga ninguna, se la podemos separar/vender.
+// Esto NUNCA modifica nuestro álbum hasta que se confirma la venta (y ahí
+// solo resta 1 a la cantidad de las figuritas tildadas).
+// ----------------------------------------------------------------------------
+let sellRows = []; // flat list of {key, num, sectionLabel, sectionEmoji, kind, price, checkbox}
+
+function showSellPreview(clientOwnedList) {
+  const { bySection } = computeSellToClient(clientOwnedList);
+  sellRows = [];
+  sellList.innerHTML = "";
+
+  if (bySection.length === 0) {
+    sellList.innerHTML = `<div class="repeats-empty">No tenés ninguna repetida que a este cliente le falte. Nada para venderle por ahora — ¡probá con otro código!</div>`;
+  } else {
+    for (const { section, rows } of bySection) {
+      const teamBlock = document.createElement("div");
+      teamBlock.className = "repeats-team";
+      const nameEl = document.createElement("div");
+      nameEl.className = "repeats-team-name";
+      nameEl.textContent = `${section.emoji} ${section.label}`;
+      teamBlock.appendChild(nameEl);
+
+      for (const r of rows) {
+        const row = document.createElement("label");
+        row.className = "sell-row";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "sell-row-check";
+        checkbox.checked = true;
+        checkbox.addEventListener("change", updateSellTotal);
+        row.appendChild(checkbox);
+
+        const info = document.createElement("span");
+        info.className = "sell-row-info";
+        info.innerHTML = `<span class="repeats-row-num">#${escapeHtml(r.num)}</span>${
+          r.kind !== "comun" ? ` <span class="chip-kind chip-kind-${r.kind}">${kindLabel(r.kind)}</span>` : ""
+        } <span class="repeats-row-extra">te sobran ${r.availableExtra}</span>`;
+        row.appendChild(info);
+
+        const priceEl = document.createElement("span");
+        priceEl.className = "sell-row-price";
+        priceEl.textContent = `$${r.price.toLocaleString("es-AR")}`;
+        row.appendChild(priceEl);
+
+        teamBlock.appendChild(row);
+        sellRows.push({
+          key: r.key,
+          num: r.num,
+          sectionLabel: section.label,
+          sectionEmoji: section.emoji,
+          kind: r.kind,
+          price: r.price,
+          checkbox,
+        });
+      }
+      sellList.appendChild(teamBlock);
+    }
+  }
+
+  updateSellTotal();
+  sellModal.classList.remove("hidden");
+}
+
+function updateSellTotal() {
+  let count = 0;
+  let total = 0;
+  for (const r of sellRows) {
+    if (r.checkbox.checked) {
+      count++;
+      total += r.price;
+    }
+  }
+  sellSummary.innerHTML = sellRows.length
+    ? `
+    <div class="result-stat"><b>${count}</b><span>SELECCIONADAS</span></div>
+    <div class="result-stat"><b>$${total.toLocaleString("es-AR")}</b><span>TOTAL A COBRAR</span></div>
+  `
+    : "";
+  if (sellConfirmBtn) sellConfirmBtn.disabled = count === 0;
+}
+
+function buildSellShareText() {
+  const selected = sellRows.filter((r) => r.checkbox.checked);
+  if (selected.length === 0) return "";
+
+  const lines = ["🔁 Te separo estas figuritas del Álbum Mundial 2026:", ""];
+  let total = 0;
+  let lastTeam = null;
+  for (const r of selected) {
+    if (r.sectionLabel !== lastTeam) {
+      lines.push(`${r.sectionEmoji} ${r.sectionLabel}`);
+      lastTeam = r.sectionLabel;
+    }
+    const kindTxt = r.kind !== "comun" ? ` (${kindLabel(r.kind)})` : "";
+    lines.push(`  #${r.num}${kindTxt} - $${r.price.toLocaleString("es-AR")}`);
+    total += r.price;
+  }
+  lines.push("");
+  lines.push(`Total: $${total.toLocaleString("es-AR")} (${selected.length} figuritas)`);
+  return lines.join("\n");
+}
+
+async function copySellList() {
+  const text = buildSellShareText();
+  if (!text) {
+    showToast("Marcá al menos una figurita primero");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("Lista copiada — pegala en WhatsApp o donde quieras");
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      showToast("Lista copiada — pegala en WhatsApp o donde quieras");
+    } catch (e2) {
+      showToast("No pude copiar. Mantené presionado el texto para copiarlo a mano.");
+    }
+    document.body.removeChild(ta);
+  }
+}
+
+function confirmSale() {
+  const selected = sellRows.filter((r) => r.checkbox.checked);
+  if (selected.length === 0) return;
+  let total = 0;
+  for (const r of selected) {
+    const entry = getEntry(r.key);
+    setQty(r.key, entry.qty - 1); // resta 1 copia: la que se separó/vendió
+    total += r.price;
+  }
+  saveState();
+  renderAll();
+  sellModal.classList.add("hidden");
+  showToast(`Venta registrada: ${selected.length} figuritas · $${total.toLocaleString("es-AR")}`);
+  sellRows = [];
+}
+
+function setupSellModal() {
+  document.getElementById("btn-scan-client").addEventListener("click", () => openScanner("client"));
+  document.getElementById("sell-close").addEventListener("click", () => {
+    sellModal.classList.add("hidden");
+    sellRows = [];
+  });
+  sellModal.addEventListener("click", (e) => {
+    if (e.target === sellModal) {
+      sellModal.classList.add("hidden");
+      sellRows = [];
+    }
+  });
+  document.getElementById("sell-copy").addEventListener("click", copySellList);
+  document.getElementById("sell-confirm").addEventListener("click", confirmSale);
+}
+
+// ----------------------------------------------------------------------------
 // Sincronización entre dispositivos (Firebase Firestore, opcional)
 // ----------------------------------------------------------------------------
 const SYNC_CODE_KEY = "figuritas-sync-code-v1";
@@ -650,7 +957,8 @@ async function pushToCloud(code) {
   lastPushedAt = now;
   await setDoc(albumDocRef(code), {
     state: JSON.stringify(state),
-    defaultPrice: localStorage.getItem(DEFAULT_PRICE_KEY) || "",
+    priceCommon: getCommonPrice(),
+    pricePremium: getPremiumPrice(),
     updatedAt: now,
   });
   updateSyncStatus(`Subido a la nube · ${new Date(now).toLocaleTimeString("es-AR")}`);
@@ -678,10 +986,15 @@ function applyRemoteData(data) {
   applyingRemoteChange = true;
   try {
     state = JSON.parse(data.state || "{}");
-    if (data.defaultPrice) {
-      localStorage.setItem(DEFAULT_PRICE_KEY, data.defaultPrice);
-      el.defaultPrice.value = data.defaultPrice;
+    if (typeof data.priceCommon === "number") {
+      localStorage.setItem(PRICE_COMMON_KEY, data.priceCommon);
+      el.priceCommon.value = data.priceCommon;
     }
+    if (typeof data.pricePremium === "number") {
+      localStorage.setItem(PRICE_PREMIUM_KEY, data.pricePremium);
+      el.pricePremium.value = data.pricePremium;
+    }
+    refreshPriceLegend();
     saveState();
     renderAll();
   } finally {
@@ -820,7 +1133,8 @@ function exportBackup() {
     version: 1,
     exportedAt: new Date().toISOString(),
     state,
-    defaultPrice: localStorage.getItem(DEFAULT_PRICE_KEY),
+    priceCommon: getCommonPrice(),
+    pricePremium: getPremiumPrice(),
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: "application/json",
@@ -857,10 +1171,15 @@ function importBackupFile(file) {
     );
     if (!ok) return;
     state = parsed.state;
-    if (typeof parsed.defaultPrice === "string") {
-      localStorage.setItem(DEFAULT_PRICE_KEY, parsed.defaultPrice);
-      el.defaultPrice.value = parsed.defaultPrice;
+    if (typeof parsed.priceCommon === "number") {
+      localStorage.setItem(PRICE_COMMON_KEY, parsed.priceCommon);
+      el.priceCommon.value = parsed.priceCommon;
     }
+    if (typeof parsed.pricePremium === "number") {
+      localStorage.setItem(PRICE_PREMIUM_KEY, parsed.pricePremium);
+      el.pricePremium.value = parsed.pricePremium;
+    }
+    refreshPriceLegend();
     saveState();
     renderAll();
     document.getElementById("backup-modal").classList.add("hidden");
@@ -985,6 +1304,10 @@ let mediaStream = null;
 let scanRAF = null;
 let scanTimer = null;
 let pendingOwnedList = null;
+// "own" = leyendo mi propio QR para actualizar mi álbum (comportamiento de
+// siempre); "client" = leyendo el QR de OTRA persona para ver qué de mis
+// repetidas le puedo vender, sin tocar mi álbum para nada.
+let scanMode = "own";
 let videoDevices = [];
 let currentDeviceIndex = 0;
 let torchOn = false;
@@ -999,8 +1322,22 @@ const scannerTorchBtn = document.getElementById("scanner-torch");
 const scannerSwitchBtn = document.getElementById("scanner-switch");
 const resultModal = document.getElementById("result-modal");
 const resultBody = document.getElementById("result-body");
+const sellModal = document.getElementById("sell-modal");
+const sellSummary = document.getElementById("sell-summary");
+const sellList = document.getElementById("sell-list");
+const sellConfirmBtn = document.getElementById("sell-confirm");
 
-function openScanner() {
+function openScanner(mode = "own") {
+  scanMode = mode;
+  const title = document.getElementById("scanner-title");
+  if (mode === "client") {
+    title.textContent = "Escanear QR de un cliente";
+    scannerStatus.textContent =
+      "Apuntá la cámara al código QR del cliente para ver qué de tus repetidas le podés vender. Esto NO modifica tu álbum.";
+  } else {
+    title.textContent = "Actualizar mi álbum";
+    scannerStatus.textContent = "Apuntá la cámara a TU PROPIO código QR de la app Figuritas.";
+  }
   scannerModal.classList.remove("hidden");
   if (typeof jsQR === "undefined" || typeof pako === "undefined") {
     scannerStatus.textContent =
@@ -1008,7 +1345,6 @@ function openScanner() {
     scannerOpen = true;
     return;
   }
-  scannerStatus.textContent = "Iniciando cámara…";
   scannerOpen = true;
   startCamera();
 }
@@ -1072,7 +1408,7 @@ async function startCamera() {
   try {
     scannerVideo.srcObject = mediaStream;
     await scannerVideo.play();
-    scannerStatus.textContent = "Apuntá la cámara al código QR de Figuritas.";
+    scannerStatus.textContent = scanInstructionText();
     await refreshDeviceList();
     setupTrackControls();
     scanLoop();
@@ -1080,6 +1416,12 @@ async function startCamera() {
     console.error(e);
     scannerStatus.textContent = cameraErrorMessage(e);
   }
+}
+
+function scanInstructionText() {
+  return scanMode === "client"
+    ? "Apuntá la cámara al QR del cliente."
+    : "Apuntá la cámara a tu propio QR de Figuritas.";
 }
 
 async function refreshDeviceList() {
@@ -1134,7 +1476,7 @@ async function switchCamera() {
     });
     scannerVideo.srcObject = mediaStream;
     await scannerVideo.play();
-    scannerStatus.textContent = "Apuntá la cámara al código QR de Figuritas.";
+    scannerStatus.textContent = scanInstructionText();
     setupTrackControls();
     scanLoop();
   } catch (e) {
@@ -1243,11 +1585,21 @@ function handleScannedFile(file) {
 function handleScannedText(text) {
   try {
     const { ownedBytes, repeatBytes } = decodeFiguritasPayload(text);
-    pendingOwnedList = ownedListFromBitmap(ownedBytes, repeatBytes);
-    showResultPreview(pendingOwnedList); // build & show the preview first
-    if (navigator.vibrate) navigator.vibrate(60); // quick haptic confirmation of a successful read
-    stopCamera();
-    scannerModal.classList.add("hidden");
+    if (scanMode === "client") {
+      // A client's QR only tells us which stickers THEY own — we compare
+      // that against OUR repeats. We never touch our own album here.
+      const clientOwnedList = ownedListFromBitmap(ownedBytes, null);
+      if (navigator.vibrate) navigator.vibrate(60);
+      stopCamera();
+      scannerModal.classList.add("hidden");
+      showSellPreview(clientOwnedList);
+    } else {
+      pendingOwnedList = ownedListFromBitmap(ownedBytes, repeatBytes);
+      showResultPreview(pendingOwnedList); // build & show the preview first
+      if (navigator.vibrate) navigator.vibrate(60); // quick haptic confirmation of a successful read
+      stopCamera();
+      scannerModal.classList.add("hidden");
+    }
   } catch (e) {
     console.error(e);
     scannerStatus.textContent = e.message ? `${e.message} (${e.name || "error"})` : "No pude leer ese código.";
@@ -1267,56 +1619,13 @@ function showResultPreview(ownedList) {
     if (!getEntry(item.key).owned) newOnes++;
   }
 
-  // Trade matching: stickers THEY have repeated that YOU don't own at all
-  // (you could get these from them), and stickers YOU have repeated that
-  // THEY don't own at all (you could offer these to them).
-  const theyOfferYou = ownedList.filter((item) => item.qty > 1 && !getEntry(item.key).owned);
-  const scannedKeys = new Set(ownedList.map((item) => item.key));
-  const youOfferThem = [];
-  for (const section of SECTIONS) {
-    for (const num of section.stickers) {
-      const key = stickerKey(section.id, num);
-      const entry = getEntry(key);
-      if (entry.owned && entry.qty > 1 && !scannedKeys.has(key)) {
-        youOfferThem.push({ sectionId: section.id, num, key });
-      }
-    }
-  }
-  const hasRepeatData = ownedList.some((item) => item.qty > 1);
-
-  const tradeSection = hasRepeatData
-    ? `
-    <div class="result-trade">
-      <p style="margin-top:14px;"><strong>Para intercambiar:</strong></p>
-      <div class="result-stat-grid">
-        <div class="result-stat"><b>${theyOfferYou.length}</b><span>TE PUEDEN DAR</span></div>
-        <div class="result-stat"><b>${youOfferThem.length}</b><span>LES PODÉS DAR</span></div>
-      </div>
-      ${
-        theyOfferYou.length
-          ? `<p class="result-trade-list">Te faltan y las tienen repetidas: ${theyOfferYou
-              .map((i) => `#${escapeHtml(i.num)}`)
-              .join(", ")}</p>`
-          : ""
-      }
-      ${
-        youOfferThem.length
-          ? `<p class="result-trade-list">Vos las tenés repetidas y a ellos les faltan: ${youOfferThem
-              .map((i) => `#${escapeHtml(i.num)}`)
-              .join(", ")}</p>`
-          : ""
-      }
-    </div>`
-    : `<p style="margin-top:14px;color:var(--muted, #888);">Este QR no trae info de repetidas, así que no puedo mostrarte posibles intercambios (solo sirve para copiar progreso).</p>`;
-
   resultBody.innerHTML = `
     <p>El código trae <strong>${ownedList.length}</strong> figuritas distintas marcadas como tuyas en la app Figuritas.</p>
     <div class="result-stat-grid">
       <div class="result-stat"><b>${ownedList.length}</b><span>EN EL QR</span></div>
       <div class="result-stat"><b>${newOnes}</b><span>NUEVAS PARA VOS</span></div>
     </div>
-    ${tradeSection}
-    <p style="margin-top:14px;">Al aplicar, se van a <strong>agregar</strong> esas ${newOnes} figuritas nuevas a tu álbum (con el precio por defecto si configuraste uno). Nada de lo que ya tenías cargado a mano — precios, ni tus repetidas — se borra o se pisa.</p>
+    <p style="margin-top:14px;">Al aplicar, se van a <strong>agregar</strong> esas ${newOnes} figuritas nuevas a tu álbum, con el precio automático según el tipo (común/escudo/formación/especial). Nada de lo que ya tenías cargado a mano — precios, cantidades ni repetidas — se borra ni se pisa.</p>
   `;
   resultModal.classList.remove("hidden");
 }
@@ -1334,7 +1643,7 @@ function applyScannedResult() {
 }
 
 function setupScanner() {
-  document.getElementById("btn-scan").addEventListener("click", openScanner);
+  document.getElementById("btn-scan").addEventListener("click", () => openScanner("own"));
   document.getElementById("scanner-close").addEventListener("click", closeScanner);
   scannerModal.addEventListener("click", (e) => {
     if (e.target === scannerModal) closeScanner();
@@ -1368,6 +1677,7 @@ async function init() {
   await loadSections();
   setupToolbar();
   setupScanner();
+  setupSellModal();
   setupRepeatsModal();
   setupBackupModal();
   setupSyncModal();

@@ -186,6 +186,11 @@ body {
   justify-content: center;
 }
 .btn-chip-badge.hidden { display: none; }
+.btn-chip-highlight {
+  background: linear-gradient(180deg, rgba(227,179,65,0.28), rgba(227,179,65,0.1));
+  border-color: var(--gold);
+}
+.btn-chip-highlight:hover { border-color: var(--gold-bright); }
 
 /* ===== Toolbar ===== */
 .toolbar {
@@ -242,6 +247,16 @@ body {
   font-weight: 700;
   font-size: 14px;
 }
+
+.field-price-group { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.price-legend {
+  margin: 0 16px 14px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--chalk-faint);
+}
+.price-legend strong { color: var(--chalk-dim); }
 
 .toolbar-actions { display: flex; gap: 8px; margin-left: auto; }
 
@@ -374,6 +389,22 @@ body {
 .chip-price:focus { color: var(--gold-bright); }
 .chip-price::placeholder { color: var(--chalk-faint); }
 .chip.owned .chip-price { color: var(--gold); }
+
+.chip-kind {
+  display: inline-block;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 4px;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+.chip-kind-escudo { background: rgba(227,179,65,0.22); color: var(--gold-bright); }
+.chip-kind-formacion { background: rgba(96,165,250,0.22); color: #93c5fd; }
+.chip-kind-especial { background: rgba(255,122,41,0.22); color: var(--amber); }
 
 .chip-qty-badge {
   position: absolute;
@@ -658,11 +689,30 @@ body {
   color: var(--gold-bright);
 }
 .result-stat span { font-size: 11px; color: var(--chalk-faint); letter-spacing: 0.08em; }
-.result-trade-list {
-  margin-top: 8px;
-  font-size: 12.5px;
-  color: var(--chalk-faint);
-  line-height: 1.5;
+.sell-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line-soft);
+  cursor: pointer;
+}
+.sell-row:first-of-type { border-top: none; }
+.sell-row-check { accent-color: var(--gold); width: 16px; height: 16px; flex: none; }
+.sell-row-info { flex: 1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sell-row-price {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--gold-bright);
+  white-space: nowrap;
+}
+
+#sell-confirm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .modal-actions {
