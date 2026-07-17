@@ -1002,6 +1002,12 @@ const resultBody = document.getElementById("result-body");
 
 function openScanner() {
   scannerModal.classList.remove("hidden");
+  if (typeof jsQR === "undefined" || typeof pako === "undefined") {
+    scannerStatus.textContent =
+      "No se pudieron cargar los archivos necesarios para leer QR (jsQR/pako). Recargá la página; si sigue fallando, puede ser un problema de conexión.";
+    scannerOpen = true;
+    return;
+  }
   scannerStatus.textContent = "Iniciando cámara…";
   scannerOpen = true;
   startCamera();
@@ -1028,8 +1034,13 @@ function cameraErrorMessage(e) {
       return "No pude configurar la cámara trasera. Probando con la cámara disponible…";
     case "SecurityError":
       return "El navegador bloqueó la cámara en esta conexión (necesita HTTPS). Podés subir una foto del QR más abajo.";
-    default:
-      return "No pude acceder a la cámara. Podés subir una foto del QR más abajo.";
+    default: {
+      // Surface the real error instead of a dead-end generic message — this
+      // is what let a missing jsQR/pako (e.g. blocked CDN) fail silently
+      // with no actionable info before.
+      const detail = e && (e.message || e.name) ? ` (${e.name || "error"}: ${e.message || "sin detalle"})` : "";
+      return `No pude acceder a la cámara${detail}. Podés subir una foto del QR más abajo.`;
+    }
   }
 }
 
@@ -1159,18 +1170,26 @@ const scanCtx = scanCanvas.getContext("2d", { willReadFrequently: true });
 function scanLoop() {
   if (!mediaStream) return;
   if (scannerVideo.readyState === scannerVideo.HAVE_ENOUGH_DATA) {
-    scanCanvas.width = scannerVideo.videoWidth;
-    scanCanvas.height = scannerVideo.videoHeight;
-    scanCtx.drawImage(scannerVideo, 0, 0, scanCanvas.width, scanCanvas.height);
-    const imageData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
-    // attemptBoth also decodes QR codes with inverted (light-on-dark) contrast,
-    // which noticeably improves reliability under glare or on glossy screens.
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: "attemptBoth",
-    });
-    if (code && code.data) {
-      handleScannedText(code.data);
-      return;
+    try {
+      scanCanvas.width = scannerVideo.videoWidth;
+      scanCanvas.height = scannerVideo.videoHeight;
+      scanCtx.drawImage(scannerVideo, 0, 0, scanCanvas.width, scanCanvas.height);
+      const imageData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
+      // attemptBoth also decodes QR codes with inverted (light-on-dark) contrast,
+      // which noticeably improves reliability under glare or on glossy screens.
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "attemptBoth",
+      });
+      if (code && code.data) {
+        handleScannedText(code.data);
+        return;
+      }
+    } catch (e) {
+      // Never let a bad frame (or a missing jsQR/pako dependency) die
+      // silently — surface it so it's actionable instead of the scanner
+      // just looking frozen with no explanation.
+      console.error(e);
+      scannerStatus.textContent = `No pude leer ese frame (${e.name || "error"}: ${e.message || "sin detalle"}). Reintentando…`;
     }
   }
   // Throttled via setTimeout+rAF instead of scanning every single frame:
@@ -1196,17 +1215,24 @@ function handleScannedFile(file) {
       scannerStatus.textContent = "No pude abrir esa imagen. Probá con otra foto.";
     };
     img.onload = () => {
-      scanCanvas.width = img.width;
-      scanCanvas.height = img.height;
-      scanCtx.drawImage(img, 0, 0);
-      const imageData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "attemptBoth",
-      });
-      if (code && code.data) {
-        handleScannedText(code.data);
-      } else {
-        scannerStatus.textContent = "No pude leer un QR en esa imagen. Probá con otra foto, con más luz y sin recortar los bordes del código.";
+      try {
+        scanCanvas.width = img.width;
+        scanCanvas.height = img.height;
+        scanCtx.drawImage(img, 0, 0);
+        const imageData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "attemptBoth",
+        });
+        if (code && code.data) {
+          handleScannedText(code.data);
+        } else {
+          scannerStatus.textContent = "No pude leer un QR en esa imagen. Probá con otra foto, con más luz y sin recortar los bordes del código.";
+        }
+      } catch (e) {
+        // Previously an error here (e.g. jsQR/pako missing) failed
+        // completely silently — nothing updated and no message showed.
+        console.error(e);
+        scannerStatus.textContent = `No pude procesar esa imagen (${e.name || "error"}: ${e.message || "sin detalle"}).`;
       }
     };
     img.src = reader.result;
@@ -1218,13 +1244,13 @@ function handleScannedText(text) {
   try {
     const { ownedBytes, repeatBytes } = decodeFiguritasPayload(text);
     pendingOwnedList = ownedListFromBitmap(ownedBytes, repeatBytes);
+    showResultPreview(pendingOwnedList); // build & show the preview first
     if (navigator.vibrate) navigator.vibrate(60); // quick haptic confirmation of a successful read
     stopCamera();
     scannerModal.classList.add("hidden");
-    showResultPreview(pendingOwnedList);
   } catch (e) {
     console.error(e);
-    scannerStatus.textContent = e.message || "No pude leer ese código.";
+    scannerStatus.textContent = e.message ? `${e.message} (${e.name || "error"})` : "No pude leer ese código.";
     // Keep scanning instead of dying silently — a misread or a QR from another
     // app shouldn't strand the user in a broken state.
     if (mediaStream) {

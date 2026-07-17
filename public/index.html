@@ -13,10 +13,12 @@
 
 <link rel="stylesheet" href="./style.css" />
 
-<!-- QR decoding (camera + image) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+<!-- QR decoding (camera + image) — bundled locally so a blocked/failed
+     CDN request can't silently break the scanner (this was causing scans
+     to fail with no clear error). -->
+<script src="./vendor/jsQR.js"></script>
 <!-- Gzip inflate for the Figuritas QR payload -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+<script src="./vendor/pako.min.js"></script>
 </head>
 <body>
 
