@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Álbum Mundial 2026 — Control de figuritas</title>
+<meta name="description" content="Llevá el control de tus figuritas del Mundial 2026: cuáles tenés, precio de cada una y el total invertido." />
+<meta name="theme-color" content="#0B2818" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="./style.css" />
+
+<!-- QR decoding (camera + image) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+<!-- Gzip inflate for the Figuritas QR payload -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+</head>
+<body>
+
+<div id="app">
+
+  <header class="appbar">
+    <div class="appbar-title">
+      <span class="appbar-crest">🏆</span>
+      <div>
+        <h1>Álbum Mundial 2026</h1>
+        <p class="appbar-sub">USA · MÉX · CAN</p>
+      </div>
+    </div>
+    <button id="btn-scan" class="btn-gold">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M3 12h18"/></svg>
+      Escanear QR
+    </button>
+  </header>
+
+  <section class="scoreboard" aria-label="Resumen de colección">
+    <div class="score-cell">
+      <div class="score-value" id="score-owned">0</div>
+      <div class="score-label">TENGO <span id="score-total-stickers">/ 980</span></div>
+    </div>
+    <div class="score-divider" aria-hidden="true"></div>
+    <div class="score-cell">
+      <div class="score-value" id="score-percent">0%</div>
+      <div class="score-label">COMPLETO</div>
+    </div>
+    <div class="score-divider" aria-hidden="true"></div>
+    <div class="score-cell score-cell-value">
+      <div class="score-value score-value-money"><span class="currency">$</span><span id="score-money">0</span></div>
+      <div class="score-label">VALOR TOTAL</div>
+    </div>
+  </section>
+
+  <section class="quick-actions">
+    <button id="btn-sync" class="btn-chip">
+      <span class="btn-chip-icon">🔗</span>
+      <span>Sincronizar dispositivos</span>
+      <span id="sync-badge" class="btn-chip-badge hidden">AUTO</span>
+    </button>
+    <button id="btn-repeats" class="btn-chip">
+      <span class="btn-chip-icon">🔁</span>
+      <span>Repetidas para vender</span>
+      <span id="repeats-badge" class="btn-chip-badge hidden">0</span>
+    </button>
+    <button id="btn-backup" class="btn-chip">
+      <span class="btn-chip-icon">💾</span>
+      <span>Backup de mis datos</span>
+    </button>
+  </section>
+
+  <section class="toolbar">
+    <div class="field-search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" type="text" placeholder="Buscar equipo (ej: México, ARG, Brasil...)" autocomplete="off" />
+    </div>
+    <div class="field-price">
+      <label for="default-price">Precio x figu ($)</label>
+      <input id="default-price" type="number" min="0" step="1" inputmode="decimal" placeholder="0" />
+    </div>
+    <div class="toolbar-actions">
+      <button id="btn-missing" class="btn-ghost btn-ghost-small" data-state="off">Solo faltantes</button>
+      <button id="btn-onlyrepeats" class="btn-ghost btn-ghost-small" data-state="off">Solo repetidas</button>
+      <button id="btn-reset" class="btn-ghost btn-ghost-small btn-danger">Reiniciar álbum</button>
+    </div>
+  </section>
+
+  <main id="sections" class="sections" aria-live="polite">
+    <div class="loading">Cargando álbum…</div>
+  </main>
+
+  <footer class="app-footer">
+    <p>Tus datos se guardan solo en este navegador/celular. El escaneo de QR lee el formato de la app <strong>Figuritas</strong> y agrega automáticamente las figuritas que marca como tuyas, sin borrar ni pisar las que ya tenías cargadas a mano.</p>
+  </footer>
+</div>
+
+<!-- Scanner modal -->
+<div id="scanner-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="scanner-title">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2 id="scanner-title">Escanear QR de Figuritas</h2>
+      <button id="scanner-close" class="btn-icon" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="scanner-body">
+      <div class="video-wrap">
+        <video id="scanner-video" playsinline muted></video>
+        <div class="scan-frame"></div>
+      </div>
+      <p id="scanner-status" class="scanner-status">Apuntá la cámara al código QR que te muestra la app Figuritas.</p>
+      <div class="scanner-controls hidden" id="scanner-controls">
+        <button id="scanner-torch" class="btn-ghost btn-ghost-small hidden">💡 Linterna</button>
+        <button id="scanner-switch" class="btn-ghost btn-ghost-small hidden">🔄 Cambiar cámara</button>
+      </div>
+      <div class="scanner-alt">
+        <span>¿No podés usar la cámara?</span>
+        <label class="btn-ghost btn-ghost-small file-btn">
+          Subir foto del QR
+          <input id="scanner-file" type="file" accept="image/*" hidden />
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scan result confirmation -->
+<div id="result-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="result-title">
+  <div class="modal-panel modal-panel-small">
+    <div class="modal-head">
+      <h2 id="result-title">QR leído ✔</h2>
+      <button id="result-close" class="btn-icon" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="result-body" class="result-body"></div>
+    <div class="modal-actions">
+      <button id="result-cancel" class="btn-ghost">Cancelar</button>
+      <button id="result-apply" class="btn-gold">Aplicar a mi álbum</button>
+    </div>
+  </div>
+</div>
+
+<!-- Repeats-for-sale modal -->
+<div id="repeats-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="repeats-title">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2 id="repeats-title">Repetidas para vender</h2>
+      <button id="repeats-close" class="btn-icon" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="repeats-summary" class="repeats-summary"></div>
+    <div id="repeats-list" class="repeats-list"></div>
+    <div class="modal-actions">
+      <button id="repeats-copy" class="btn-gold">Copiar lista para compartir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Backup modal -->
+<div id="backup-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="backup-title">
+  <div class="modal-panel modal-panel-small">
+    <div class="modal-head">
+      <h2 id="backup-title">Backup de mis datos</h2>
+      <button id="backup-close" class="btn-icon" aria-label="Cerrar">✕</button>
+    </div>
+    <p class="backup-text">
+      Tu álbum vive solo en este navegador. Si cambiás de celular, actualizás
+      la app, o borrás datos del navegador por error, lo perdés. Descargá un
+      backup de tanto en tanto para no perder tus figuritas, precios y
+      repetidas cargadas.
+    </p>
+    <div class="modal-actions">
+      <button id="backup-export" class="btn-ghost">⬇️ Descargar backup</button>
+      <label class="btn-gold file-btn" style="justify-content:center;">
+        ⬆️ Restaurar backup
+        <input id="backup-import" type="file" accept="application/json" hidden />
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- Sync modal -->
+<div id="sync-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="sync-title">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2 id="sync-title">Sincronizar entre dispositivos</h2>
+      <button id="sync-close" class="btn-icon" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div id="sync-not-configured" class="hidden">
+      <p class="backup-text">
+        Todavía no conectaste esta app a un proyecto de Firebase, así que la
+        sincronización automática está apagada. Mientras tanto, podés usar
+        el <strong>Backup</strong> para pasar tus datos a mano entre
+        dispositivos. Mirá el README ("Sincronizar entre dispositivos") para
+        el paso a paso de cómo activarla — son 2 minutos y es gratis.
+      </p>
+    </div>
+
+    <div id="sync-controls">
+      <p class="backup-text">
+        Elegí un <strong>código de álbum</strong> (una palabra o frase que
+        solo vos conozcas, ej. <code>familia-gomez-mundial26</code>) y
+        cargalo igual en el celular y en la compu. Cualquiera que sepa ese
+        código puede ver y editar este álbum, así que no lo compartas
+        públicamente.
+      </p>
+      <div class="sync-field">
+        <input id="sync-code-input" type="text" placeholder="mi-codigo-secreto" autocomplete="off" />
+        <button id="sync-save-code" class="btn-ghost btn-ghost-small">Guardar código</button>
+      </div>
+
+      <label class="sync-toggle">
+        <input id="sync-auto-toggle" type="checkbox" />
+        <span>Sincronización automática (en tiempo real, en cuanto haya conexión)</span>
+      </label>
+
+      <div class="modal-actions">
+        <button id="sync-pull" class="btn-ghost">⬇️ Traer de la nube</button>
+        <button id="sync-push" class="btn-gold">⬆️ Subir ahora</button>
+      </div>
+
+      <p id="sync-status" class="scanner-status"></p>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="./app.js" type="module"></script>
+</body>
+</html>
