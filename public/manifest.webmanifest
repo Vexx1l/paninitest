@@ -2,7 +2,7 @@
   "name": "Álbum Mundial 2026 — Figuritas",
   "short_name": "Mis Figuritas",
   "description": "Control de figuritas del Mundial 2026: cuáles tenés, precio de cada una y el total invertido.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

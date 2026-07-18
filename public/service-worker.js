@@ -3,12 +3,11 @@
 // strategy — Firebase sync calls and font requests always go to the
 // network as normal; only the app's own static files are cached.
 
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const CACHE_NAME = `album-mundial-2026-${CACHE_VERSION}`;
 
 const APP_SHELL = [
   "./",
-  "./index.html",
   "./style.css",
   "./app.js",
   "./sections.json",
