@@ -17,6 +17,7 @@
      CDN request can't silently break the scanner (this was causing scans
      to fail with no clear error). -->
 <script src="./vendor/jsQR.js"></script>
+<script src="./vendor/qrcode.js"></script>
 <!-- Gzip inflate for the Figuritas QR payload -->
 <script src="./vendor/pako.min.js"></script>
 </head>
@@ -144,6 +145,10 @@
         <span class="btn-chip-icon">💾</span>
         <span>Backup de mis datos</span>
       </button>
+      <button id="btn-export-qr" class="btn-chip">
+        <span class="btn-chip-icon">📤</span>
+        <span>Exportar QR para Figuritas</span>
+      </button>
       <button id="btn-reset" class="btn-chip btn-chip-danger">
         <span class="btn-chip-icon">🗑️</span>
         <span>Reiniciar álbum</span>
@@ -240,6 +245,33 @@
         ⬆️ Restaurar backup
         <input id="backup-import" type="file" accept="application/json" hidden />
       </label>
+    </div>
+  </div>
+</div>
+
+<!-- Export QR modal -->
+<div id="export-qr-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="export-qr-title">
+  <div class="modal-panel modal-panel-small">
+    <div class="modal-head">
+      <h2 id="export-qr-title">Exportar QR para Figuritas</h2>
+      <button id="export-qr-close" class="btn-icon" aria-label="Cerrar">✕</button>
+    </div>
+    <p class="backup-text">
+      Este código QR está armado con el mismo formato que usa la app
+      <strong>Figuritas</strong> para su propio QR (mapa de bits comprimido).
+      Abrí <strong>Figuritas → tu álbum → Importar</strong> y apuntá la
+      cámara a este código para llevar tu progreso de esta página a la app.
+      <br /><br />
+      <strong>⚠️ Experimental:</strong> el formato fue reconstruido
+      comparando códigos reales, no es documentación oficial de Figuritas.
+      Antes de confiar en él, probalo una vez e íjate que el resumen que te
+      muestre Figuritas al importar (pegadas y repetidas) coincida con lo
+      que ves acá.
+    </p>
+    <div id="export-qr-code" class="export-qr-code"></div>
+    <p id="export-qr-summary" class="import-stats-caption"></p>
+    <div class="modal-actions">
+      <button id="export-qr-download" class="btn-ghost">⬇️ Descargar imagen</button>
     </div>
   </div>
 </div>

@@ -928,6 +928,17 @@ body {
   color: var(--chalk-dim);
 }
 .import-stat-divider { width: 1px; height: 40px; background: var(--line); }
+
+.export-qr-code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  margin: 4px 0 12px;
+}
+.export-qr-code svg { width: 100%; max-width: 260px; height: auto; display: block; }
 .import-note {
   text-align: center;
   font-size: 13px;

@@ -97,6 +97,31 @@ Si en algún momento la app Figuritas cambia el formato de su QR, el lector
 puede dejar de funcionar — en ese caso seguís pudiendo cargar todo a mano
 desde la grilla de figuritas.
 
+### Corrección: conteo de repetidas al importar
+
+El tercer bloque comprimido del QR (uno por cada figurita repetida) no
+contiene "copias extra además de la primera" como se creía originalmente:
+contiene la **cantidad total** de copias de esa figurita. Sumar +1 de más
+por cada repetida inflaba el número de "Repetidas" que mostraba esta app al
+importar (comparado con lo que muestra la propia app Figuritas). Esto ya
+está corregido: los números de "Pegadas" y "Repetidas" que ves al importar
+ahora coinciden con los de Figuritas.
+
+### Exportar de vuelta a Figuritas (experimental)
+
+En **⚙️ Ajustes → "📤 Exportar QR para Figuritas"** podés generar un código
+QR con el progreso cargado en esta página, armado con el mismo formato
+(mapa de bits comprimido) que usa la app Figuritas para el suyo. La idea es
+poder abrir Figuritas, elegir "Importar" y escanear este código para llevar
+lo cargado acá de vuelta a la app.
+
+Como el formato del QR de Figuritas no es una especificación oficial sino
+algo reconstruido comparando códigos reales, esta función es
+**experimental**: no hay garantía de que la app Figuritas lo acepte tal
+cual. Antes de confiar en ella, probala una vez y fijate que el resumen que
+te muestre Figuritas al importar coincida con el que te muestra esta página
+antes de escanear.
+
 ### Dos modos de escaneo
 
 Hay dos botones distintos porque el QR de la app Figuritas se ve igual sea

@@ -1325,6 +1325,104 @@ function setupBackupModal() {
 }
 
 // ----------------------------------------------------------------------------
+// Export QR — build a Figuritas-compatible QR from this app's own state
+// ----------------------------------------------------------------------------
+
+/**
+ * Mirrors decodeFiguritasPayload()/ownedListFromBitmap() in reverse: walks
+ * SECTIONS in the same fixed order used everywhere else, builds the missing
+ * bitmap, the repeated bitmap, and the repeatCounts byte array (TOTAL qty
+ * per repeated sticker, matching the corrected decode logic above), then
+ * gzips + base64s each one and joins them with ";" — the same shape read by
+ * decodeFiguritasPayload (and, as best as this format could be reverse
+ * engineered, by the Figuritas app itself).
+ */
+function buildFiguritasExportPayload() {
+  const totalStickers = SECTIONS.reduce((sum, s) => sum + s.stickers.length, 0);
+  const byteLen = Math.ceil(totalStickers / 8);
+  const missingBytes = new Uint8Array(byteLen);
+  const repeatedBytes = new Uint8Array(byteLen);
+  const repeatCounts = [];
+
+  let i = 0;
+  let pegadas = 0;
+  let repetidas = 0;
+  for (const section of SECTIONS) {
+    for (const num of section.stickers) {
+      const entry = getEntry(stickerKey(section.id, num));
+      if (!entry.owned) {
+        setBitAt(missingBytes, i);
+      } else {
+        pegadas++;
+        if (entry.qty > 1) {
+          setBitAt(repeatedBytes, i);
+          repeatCounts.push(Math.max(2, Math.min(255, entry.qty)));
+          repetidas += entry.qty - 1;
+        }
+      }
+      i++;
+    }
+  }
+
+  const segments = [
+    deflateToBase64(missingBytes),
+    deflateToBase64(repeatedBytes),
+  ];
+  if (repeatCounts.length > 0) {
+    segments.push(deflateToBase64(new Uint8Array(repeatCounts)));
+  }
+
+  return { text: segments.join(";"), pegadas, repetidas };
+}
+
+function setupExportQrModal() {
+  const modal = document.getElementById("export-qr-modal");
+  const codeBox = document.getElementById("export-qr-code");
+  const summary = document.getElementById("export-qr-summary");
+  let lastSvgDataUrl = null;
+
+  function openExportQr() {
+    codeBox.innerHTML = "";
+    summary.textContent = "";
+    if (typeof qrcode === "undefined" || typeof pako === "undefined") {
+      showToast("No se pudo generar el QR (falta un archivo necesario). Recargá la página e intentá de nuevo.");
+      return;
+    }
+    try {
+      const { text, pegadas, repetidas } = buildFiguritasExportPayload();
+      const qr = qrcode(0, "M");
+      qr.addData(text);
+      qr.make();
+      const svg = qr.createSvgTag({ cellSize: 4, margin: 4 });
+      codeBox.innerHTML = svg;
+      lastSvgDataUrl = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+      summary.textContent = `Este QR contiene: ${pegadas} pegadas, ${repetidas} repetidas.`;
+      modal.classList.remove("hidden");
+    } catch (e) {
+      console.error(e);
+      showToast("No se pudo generar el QR de exportación.");
+    }
+  }
+
+  document.getElementById("btn-export-qr").addEventListener("click", openExportQr);
+  document.getElementById("export-qr-close").addEventListener("click", () => {
+    modal.classList.add("hidden");
+  });
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.classList.add("hidden");
+  });
+  document.getElementById("export-qr-download").addEventListener("click", () => {
+    if (!lastSvgDataUrl) return;
+    const a = document.createElement("a");
+    a.href = lastSvgDataUrl;
+    a.download = "album-mundial-2026-qr.svg";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+}
+
+// ----------------------------------------------------------------------------
 // Toast helper
 // ----------------------------------------------------------------------------
 let toastTimer = null;
@@ -1358,8 +1456,11 @@ function showToast(msg, ms = 2600) {
 //   - Segment 2 (OPTIONAL — only present when segment 1 has at least one bit
 //     set): one byte per REPEATED sticker (in the same bit order as
 //     segment 1, i.e. indexed by position among the 1-bits of segment 1, NOT
-//     by overall sticker index), giving how many EXTRA copies (beyond the
-//     first) you have of that sticker — this is the number "para vender".
+//     by overall sticker index), giving the TOTAL number of copies (not
+//     "extra beyond the first") you have of that sticker. Verified against a
+//     real export: these bytes are always >= 2 and never 0 or 1, and using
+//     them directly as the total (instead of adding 1) is what reproduces
+//     the official app's own "Repetidas" count exactly.
 // ============================================================================
 
 function decodeFiguritasPayload(rawText) {
@@ -1389,6 +1490,24 @@ function inflateBase64(b64) {
   return pako.ungzip(bytes);
 }
 
+// Inverse of inflateBase64: gzip a byte array and base64-encode it, producing
+// one "H4sI..." segment in the same shape the Figuritas app itself emits
+// (pako.gzip with default settings reproduces the same "H4sIAAAAAAAAA" gzip
+// header seen in real exports, since that header just encodes "no filename,
+// no mtime" — standard defaults, not a proprietary marker).
+function deflateToBase64(bytes) {
+  const gzipped = pako.gzip(bytes);
+  let binary = "";
+  for (let i = 0; i < gzipped.length; i++) binary += String.fromCharCode(gzipped[i]);
+  return btoa(binary);
+}
+
+function setBitAt(bytes, index) {
+  const byteIndex = index >> 3;
+  if (byteIndex >= bytes.length) return;
+  bytes[byteIndex] |= 1 << (index & 7);
+}
+
 function bitAt(bytes, index) {
   const byte = bytes[index >> 3];
   if (byte === undefined) return 0;
@@ -1399,8 +1518,19 @@ function bitAt(bytes, index) {
  * Returns array of {sectionId, num, key, qty} for every sticker the scanned
  * account OWNS — i.e. every sticker NOT flagged in the missing bitmap. qty
  * is the TOTAL copies (1 = no repeats); for stickers flagged in the repeated
- * bitmap, qty = 1 + the matching extra-copies byte from repeatCounts (or a
- * single extra copy if that segment is absent for some reason).
+ * bitmap, qty = the matching byte from repeatCounts AS-IS (that byte is
+ * already the total copy count, not "extra copies beyond the first" — see
+ * note below), or 2 as a conservative fallback if that segment is absent.
+ *
+ * Verified against a real export: repeatCounts bytes for actually-repeated
+ * stickers range from 2 upward and never contain 0 or 1 — the minimum
+ * possible value for a TOTAL count of a "repeated" sticker is 2, which is
+ * exactly what's observed. Treating the byte as "extra beyond first" (i.e.
+ * qty = byte + 1) inflates every repeated sticker's count by one extra unit,
+ * which on a real album (85 repeated stickers) summed to 653 total surplus
+ * units instead of the official app's 568 — an inflation of exactly 85 (one
+ * per repeated sticker), confirming the byte already includes the first
+ * copy and should be used directly.
  */
 function ownedListFromBitmap(missingBytes, repeatedBytes, repeatCounts) {
   const owned = [];
@@ -1413,8 +1543,7 @@ function ownedListFromBitmap(missingBytes, repeatedBytes, repeatCounts) {
       if (!isMissing) {
         let qty = 1;
         if (isRepeated) {
-          const extra = repeatCounts && repeatCounts[repeatedIndex] != null ? repeatCounts[repeatedIndex] : 1;
-          qty = extra + 1;
+          qty = repeatCounts && repeatCounts[repeatedIndex] != null ? repeatCounts[repeatedIndex] : 2;
         }
         owned.push({ sectionId: section.id, num, key: stickerKey(section.id, num), qty });
       }
@@ -1833,6 +1962,7 @@ async function init() {
   setupScanner();
   setupSellModal();
   setupBackupModal();
+  setupExportQrModal();
   setupSyncModal();
   initSyncOnBoot();
   renderAll();
