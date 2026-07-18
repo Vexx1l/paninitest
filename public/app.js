@@ -1372,7 +1372,15 @@ function buildFiguritasExportPayload() {
     segments.push(deflateToBase64(new Uint8Array(repeatCounts)));
   }
 
-  return { text: segments.join(";"), pegadas, repetidas };
+  // The album header bytes go raw, directly in front of the first segment's
+  // base64 text (no ";" between them) — matching exactly how they appear in
+  // a real Figuritas QR. qrcode.js's default byte encoder does a plain
+  // charCode&0xff per character, so String.fromCharCode(byte) round-trips
+  // these exact byte values into the QR untouched.
+  const headerStr = FIGURITAS_ALBUM_HEADER.map((b) => String.fromCharCode(b)).join("");
+  const text = headerStr + segments.join(";");
+
+  return { text, pegadas, repetidas };
 }
 
 function setupExportQrModal() {
@@ -1507,6 +1515,18 @@ function setBitAt(bytes, index) {
   if (byteIndex >= bytes.length) return;
   bytes[byteIndex] |= 1 << (index & 7);
 }
+
+// Raw (non-base64, non-gzipped) bytes that appear BEFORE the first "H4sI"
+// segment in every real Figuritas QR for this album ("Usa Méx Can 26" /
+// Álbum Mundial 2026). Confirmed byte-for-byte from a real export (read with
+// a raw-byte-accurate QR decoder, not a text-mode one — text-mode decoders
+// mangle these bytes because they don't form valid UTF-8 on their own).
+// Figuritas apparently uses this to identify which album the QR belongs to:
+// omitting it produced the "este código pertenece a un álbum diferente"
+// error when importing an app.js-generated QR back into Figuritas. It's
+// treated here as a fixed per-album constant, not something derived from
+// the user's collected stickers.
+const FIGURITAS_ALBUM_HEADER = [0xe2, 0x8b, 0x8b, 0x5e];
 
 function bitAt(bytes, index) {
   const byte = bytes[index >> 3];

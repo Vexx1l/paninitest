@@ -111,16 +111,20 @@ ahora coinciden con los de Figuritas.
 
 En **⚙️ Ajustes → "📤 Exportar QR para Figuritas"** podés generar un código
 QR con el progreso cargado en esta página, armado con el mismo formato
-(mapa de bits comprimido) que usa la app Figuritas para el suyo. La idea es
-poder abrir Figuritas, elegir "Importar" y escanear este código para llevar
-lo cargado acá de vuelta a la app.
+(mapa de bits comprimido) que usa la app Figuritas para el suyo, incluyendo
+los bytes de encabezado que identifican a qué álbum pertenece el código (sin
+esos bytes, Figuritas lo rechaza con "este código pertenece a un álbum
+diferente"). La idea es poder abrir Figuritas, elegir "Importar" y escanear
+este código para llevar lo cargado acá de vuelta a la app.
 
 Como el formato del QR de Figuritas no es una especificación oficial sino
-algo reconstruido comparando códigos reales, esta función es
-**experimental**: no hay garantía de que la app Figuritas lo acepte tal
-cual. Antes de confiar en ella, probala una vez y fijate que el resumen que
-te muestre Figuritas al importar coincida con el que te muestra esta página
-antes de escanear.
+algo reconstruido comparando códigos reales, esta función sigue siendo
+**experimental**: puede haber otras validaciones internas de la app
+(checksums, versión, etc.) que no detectamos todavía con una sola muestra.
+Antes de confiar en ella, probala una vez y fijate que el resumen que te
+muestre Figuritas al importar coincida con el que te muestra esta página
+antes de escanear. Si Figuritas rechaza el código o el resumen no coincide,
+avisá para seguir ajustando el formato.
 
 ### Dos modos de escaneo
 
