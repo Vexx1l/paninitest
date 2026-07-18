@@ -63,7 +63,39 @@ También podés hacerlo desde la terminal, parado en esta carpeta:
 npx vercel
 ```
 
+## Instalarla en el celular (sin abrir Chrome cada vez)
+
+La app ahora es una **PWA instalable**: podés agregarla a la pantalla de
+inicio y se abre como una app normal, a pantalla completa, sin la barra de
+direcciones de Chrome/Safari ni tener que escribir la URL de Vercel.
+
+**Android (Chrome):**
+1. Abrí la URL de Vercel de la app.
+2. Tocá el menú `⋮` (arriba a la derecha) → **"Instalar aplicación"** (o
+   "Agregar a la pantalla de inicio"). A veces Chrome muestra un cartelito
+   propio abajo ofreciendo instalar; también sirve.
+3. Confirmá. Va a aparecer un ícono en tu pantalla de inicio/cajón de apps,
+   igual que cualquier otra app.
+
+**iPhone (Safari):**
+1. Abrí la URL de Vercel de la app en **Safari** (tiene que ser Safari, no
+   Chrome — iOS solo permite instalar PWAs desde Safari).
+2. Tocá el botón de **Compartir** (el cuadrado con la flecha hacia arriba).
+3. Elegí **"Agregar a inicio"**.
+4. Confirmá. Te va a quedar el ícono en la pantalla de inicio.
+
+Una vez instalada, abrís ese ícono y listo — no hay barra de navegador, y
+funciona incluso con mala conexión (el "cascarón" de la app —HTML, CSS,
+JS— queda guardado en el celular; los datos siguen viviendo en
+`localStorage`/Firebase como siempre).
+
+Si actualizás el sitio en Vercel más adelante, puede que tengas que cerrar
+del todo la app instalada (deslizarla para cerrarla, no solo minimizarla) y
+volver a abrirla una o dos veces para que tome la versión nueva.
+
 ## Precios automáticos
+
+
 
 Al marcar una figurita como tuya, la app le pone un precio automático según
 el tipo:
@@ -279,6 +311,9 @@ public/
   app.js                → toda la lógica: estado, render, lector de QR, sync, backup
   sections.json         → checklist completo de las 980 figuritas del álbum
   firebase-config.js    → acá pegás los datos de tu proyecto de Firebase (opcional)
+  manifest.webmanifest  → metadata de la PWA (nombre, ícono, colores)
+  service-worker.js     → cachea el "cascarón" de la app para que sea instalable
+  icons/                → íconos de la PWA (192/512/maskable/apple-touch)
 vercel.json              → le dice a Vercel que sirva public/ como sitio estático
 ```
 

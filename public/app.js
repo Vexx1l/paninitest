@@ -1971,6 +1971,19 @@ function setupScanner() {
 }
 
 // ----------------------------------------------------------------------------
+// PWA install support
+// ----------------------------------------------------------------------------
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js").catch((e) => {
+      // Non-fatal: the app still works as a normal page, just without the
+      // "add to home screen" install prompt / offline shell.
+      console.warn("No se pudo registrar el service worker:", e);
+    });
+  });
+}
+
+// ----------------------------------------------------------------------------
 // Boot
 // ----------------------------------------------------------------------------
 async function init() {
