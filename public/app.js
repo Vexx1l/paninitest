@@ -1771,7 +1771,10 @@ function setupBackupModal() {
  * decodeFiguritasPayload (and, as best as this format could be reverse
  * engineered, by the Figuritas app itself).
  */
-function buildFiguritasExportPayload() {
+// Builds the missing/repeated bitmaps + repeat-count segments shared by both
+// QR flavors this app can generate (the Figuritas-compatible export and the
+// lighter "trade" QR aimed at other collectors using this same app).
+function buildOwnedBitmapSegments() {
   const totalStickers = SECTIONS.reduce((sum, s) => sum + s.stickers.length, 0);
   const byteLen = Math.ceil(totalStickers / 8);
   const missingBytes = new Uint8Array(byteLen);
@@ -1806,6 +1809,12 @@ function buildFiguritasExportPayload() {
     segments.push(deflateToBase64(new Uint8Array(repeatCounts)));
   }
 
+  return { segments, pegadas, repetidas };
+}
+
+function buildFiguritasExportPayload() {
+  const { segments, pegadas, repetidas } = buildOwnedBitmapSegments();
+
   // The album header bytes go raw, directly in front of the first segment's
   // base64 text (no ";" between them) — matching exactly how they appear in
   // a real Figuritas QR. qrcode.js's default byte encoder does a plain
@@ -1814,6 +1823,18 @@ function buildFiguritasExportPayload() {
   const headerStr = FIGURITAS_ALBUM_HEADER.map((b) => String.fromCharCode(b)).join("");
   const text = headerStr + segments.join(";");
 
+  return { text, pegadas, repetidas };
+}
+
+// "Mi QR para intercambiar" — a QR that is NOT meant for the official
+// Figuritas app. It reuses the same bitmap/segment encoding (so we can reuse
+// the same gzip+base64 helpers and the same decoder), but swaps the official
+// album header for our own short marker, so this app can tell the two
+// formats apart if it ever needs to (e.g. to show a clearer error message).
+const TRADE_QR_MARKER = "PANINITRADE1";
+function buildTradeQrPayload() {
+  const { segments, pegadas, repetidas } = buildOwnedBitmapSegments();
+  const text = TRADE_QR_MARKER + ";" + segments.join(";");
   return { text, pegadas, repetidas };
 }
 
@@ -1862,6 +1883,212 @@ function setupExportQrModal() {
     a.click();
     a.remove();
   });
+}
+
+function setupTradeQrModal() {
+  const modal = document.getElementById("trade-qr-modal");
+  const codeBox = document.getElementById("trade-qr-code");
+  const summary = document.getElementById("trade-qr-summary");
+  let lastSvgDataUrl = null;
+
+  function openTradeQr() {
+    codeBox.innerHTML = "";
+    summary.textContent = "";
+    if (typeof qrcode === "undefined" || typeof pako === "undefined") {
+      showToast("No se pudo generar el QR (falta un archivo necesario). Recargá la página e intentá de nuevo.");
+      return;
+    }
+    try {
+      const { text, pegadas, repetidas } = buildTradeQrPayload();
+      const faltantes = totalStickerCount() - pegadas;
+      const qr = qrcode(0, "M");
+      qr.addData(text);
+      qr.make();
+      const svg = qr.createSvgTag({ cellSize: 4, margin: 4 });
+      codeBox.innerHTML = svg;
+      lastSvgDataUrl = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+      summary.textContent = `Este código incluye tus ${repetidas} repetidas para ofrecer y tus ${faltantes} figuritas que te faltan.`;
+      modal.classList.remove("hidden");
+    } catch (e) {
+      console.error(e);
+      showToast("No se pudo generar el QR de intercambio.");
+    }
+  }
+
+  document.getElementById("btn-share-trade-qr").addEventListener("click", openTradeQr);
+  document.getElementById("trade-qr-close").addEventListener("click", () => {
+    modal.classList.add("hidden");
+  });
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.classList.add("hidden");
+  });
+  document.getElementById("trade-qr-download").addEventListener("click", () => {
+    if (!lastSvgDataUrl) return;
+    const a = document.createElement("a");
+    a.href = lastSvgDataUrl;
+    a.download = "mi-qr-intercambio-mundial-2026.svg";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+}
+
+// ----------------------------------------------------------------------------
+// Resultado de intercambio (dos direcciones) — al leer el QR de otro
+// coleccionista con "Leer QR de otro coleccionista".
+// ----------------------------------------------------------------------------
+let lastTradeMatch = null;
+
+function computeTradeMatch(otherOwnedList) {
+  // Lo que YO le puedo dar a él/ella: mis repetidas que no tiene (reusa la
+  // misma lógica que "Vender a un cliente").
+  const sell = computeSellToClient(otherOwnedList);
+
+  // Lo que ÉL/ELLA me puede dar a MÍ: sus repetidas (qty > 1 en su propio
+  // álbum) que a mí me faltan.
+  const otherRepeatsByKey = new Map();
+  for (const item of otherOwnedList) {
+    if (item.qty > 1) otherRepeatsByKey.set(item.key, item.qty);
+  }
+
+  const theyCanGive = [];
+  let theyCanGiveCount = 0;
+  for (const section of SECTIONS) {
+    const rows = [];
+    for (const num of section.stickers) {
+      const key = stickerKey(section.id, num);
+      if (!otherRepeatsByKey.has(key)) continue;
+      if (getEntry(key).owned) continue; // ya la tengo, no me sirve
+      rows.push({
+        key,
+        num,
+        kind: stickerKind(section, num),
+        availableExtra: otherRepeatsByKey.get(key) - 1,
+      });
+      theyCanGiveCount++;
+    }
+    if (rows.length > 0) theyCanGive.push({ section, rows });
+  }
+
+  return {
+    iCanGive: sell.bySection,
+    iCanGiveCount: sell.totalItems,
+    iCanGiveValue: sell.totalValue,
+    theyCanGive,
+    theyCanGiveCount,
+  };
+}
+
+function renderTradeSide(title, bySection, emptyMsg, showPrice) {
+  let html = `<h3 class="trade-result-heading">${title}</h3>`;
+  if (bySection.length === 0) {
+    html += `<div class="repeats-empty">${emptyMsg}</div>`;
+    return html;
+  }
+  for (const { section, rows } of bySection) {
+    html += `<div class="repeats-team"><div class="repeats-team-name">${section.emoji} ${escapeHtml(section.label)}</div>`;
+    for (const r of rows) {
+      const kindTag = r.kind !== "comun" ? `<span class="chip-kind chip-kind-${r.kind}">${kindLabel(r.kind)}</span> ` : "";
+      const rightTxt = showPrice
+        ? `te sobran ${r.availableExtra} · $${r.price.toLocaleString("es-AR")}`
+        : `tiene ${r.availableExtra} de sobra para vos`;
+      html += `<div class="repeats-row">
+        <span class="repeats-row-num">${kindTag}#${escapeHtml(r.num)}</span>
+        <span class="repeats-row-extra">${rightTxt}</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  return html;
+}
+
+function showTradeResult(otherOwnedList) {
+  const m = computeTradeMatch(otherOwnedList);
+  lastTradeMatch = m;
+
+  const body = document.getElementById("trade-result-body");
+  body.innerHTML = `
+    <div class="result-stat-grid">
+      <div class="result-stat"><b>${m.iCanGiveCount}</b><span>VOS LE PODÉS DAR</span></div>
+      <div class="result-stat"><b>${m.theyCanGiveCount}</b><span>TE PUEDE DAR A VOS</span></div>
+    </div>
+    ${renderTradeSide(
+      "🎁 Tus repetidas que a él/ella le faltan",
+      m.iCanGive,
+      "No tenés ninguna repetida que a esta persona le falte.",
+      true
+    )}
+    ${renderTradeSide(
+      "🙌 Sus repetidas que a vos te faltan",
+      m.theyCanGive,
+      "Esta persona no tiene ninguna repetida de lo que a vos te falta.",
+      false
+    )}
+  `;
+  document.getElementById("trade-result-modal").classList.remove("hidden");
+}
+
+function buildTradeShareText() {
+  if (!lastTradeMatch || (lastTradeMatch.iCanGiveCount === 0 && lastTradeMatch.theyCanGiveCount === 0)) {
+    return "";
+  }
+  const lines = ["🔄 Posible intercambio de figuritas — Álbum Mundial 2026", ""];
+  if (lastTradeMatch.iCanGiveCount > 0) {
+    lines.push("Yo te puedo dar (mis repetidas que a vos te faltan):");
+    for (const { section, rows } of lastTradeMatch.iCanGive) {
+      for (const r of rows) {
+        lines.push(`  ${section.emoji} #${r.num} - $${r.price.toLocaleString("es-AR")}`);
+      }
+    }
+    lines.push("");
+  }
+  if (lastTradeMatch.theyCanGiveCount > 0) {
+    lines.push("Vos me podés dar (tus repetidas que a mí me faltan):");
+    for (const { section, rows } of lastTradeMatch.theyCanGive) {
+      for (const r of rows) {
+        lines.push(`  ${section.emoji} #${r.num}`);
+      }
+    }
+  }
+  return lines.join("\n");
+}
+
+async function copyTradeResult() {
+  const text = buildTradeShareText();
+  if (!text) {
+    showToast("No hay ningún intercambio posible para copiar");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("Resumen copiado — pegalo en WhatsApp o donde quieras");
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      showToast("Resumen copiado — pegalo en WhatsApp o donde quieras");
+    } catch (e2) {
+      showToast("No pude copiar. Mantené presionado el texto para copiarlo a mano.");
+    }
+    document.body.removeChild(ta);
+  }
+}
+
+function setupTradeResultModal() {
+  document.getElementById("btn-scan-trade").addEventListener("click", () => openScanner("trade"));
+  const modal = document.getElementById("trade-result-modal");
+  document.getElementById("trade-result-close").addEventListener("click", () => {
+    modal.classList.add("hidden");
+  });
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.classList.add("hidden");
+  });
+  document.getElementById("trade-result-copy").addEventListener("click", copyTradeResult);
 }
 
 // ----------------------------------------------------------------------------
@@ -2045,6 +2272,10 @@ function openScanner(mode = "own") {
     title.textContent = "Escanear QR de un cliente";
     scannerStatus.textContent =
       "Apuntá la cámara al código QR del cliente para ver qué de tus repetidas le podés vender. Esto NO modifica tu álbum.";
+  } else if (mode === "trade") {
+    title.textContent = "Leer QR de otro coleccionista";
+    scannerStatus.textContent =
+      "Apuntá la cámara al \"QR para intercambiar\" de la otra persona. Esto NO modifica tu álbum.";
   } else {
     title.textContent = "Actualizar mi álbum";
     scannerStatus.textContent = "Apuntá la cámara a TU PROPIO código QR de la app Figuritas.";
@@ -2130,9 +2361,9 @@ async function startCamera() {
 }
 
 function scanInstructionText() {
-  return scanMode === "client"
-    ? "Apuntá la cámara al QR del cliente."
-    : "Apuntá la cámara a tu propio QR de Figuritas.";
+  if (scanMode === "client") return "Apuntá la cámara al QR del cliente.";
+  if (scanMode === "trade") return "Apuntá la cámara al QR de intercambio de la otra persona.";
+  return "Apuntá la cámara a tu propio QR de Figuritas.";
 }
 
 async function refreshDeviceList() {
@@ -2304,6 +2535,15 @@ function handleScannedText(text) {
       stopCamera();
       scannerModal.classList.add("hidden");
       showSellPreview(clientOwnedList);
+    } else if (scanMode === "trade") {
+      // Same underlying decode as above, but shows a two-way comparison
+      // (what I can give them + what they can give me) instead of a one-way
+      // sale, and never touches our own album either.
+      const otherOwnedList = ownedListFromBitmap(missingBytes, repeatedBytes, repeatCounts);
+      if (navigator.vibrate) navigator.vibrate(60);
+      stopCamera();
+      scannerModal.classList.add("hidden");
+      showTradeResult(otherOwnedList);
     } else {
       pendingOwnedList = ownedListFromBitmap(missingBytes, repeatedBytes, repeatCounts);
       showResultPreview(pendingOwnedList); // build & show the preview first
@@ -2432,6 +2672,8 @@ async function init() {
   setupSellModal();
   setupBackupModal();
   setupExportQrModal();
+  setupTradeQrModal();
+  setupTradeResultModal();
   setupExtrasTab();
   setupSyncModal();
   initSyncOnBoot();

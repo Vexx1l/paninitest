@@ -177,11 +177,34 @@ muestre Figuritas al importar coincida con el que te muestra esta página
 antes de escanear. Si Figuritas rechaza el código o el resumen no coincide,
 avisá para seguir ajustando el formato.
 
-### Dos modos de escaneo
+### Mi QR para intercambiar
 
-Hay dos botones distintos porque el QR de la app Figuritas se ve igual sea
-tu propio código o el de otra persona — la app no tiene forma de saber de
-quién es, así que elegís vos la intención tocando el botón correcto:
+En la pestaña **💰 Venta → "🔄 Mi QR para intercambiar"** hay un código
+**distinto** al de "Exportar QR para Figuritas": no está pensado para la app
+oficial, sino para que lo lea **otro coleccionista que use esta misma app**.
+
+Sirve para las dos puntas de un intercambio a la vez:
+
+- Si estás buscando láminas, mostrale tu QR a alguien: al leerlo, esa
+  persona ve enseguida cuáles de sus repetidas te sirven a vos.
+- Si alguien quiere saber qué tenés repetido para ofrecerte algo a cambio,
+  con el mismo código ve también cuáles de tus repetidas le sirven a
+  ella/él.
+
+Para leerlo, la otra persona toca **"🔍 Leer QR de otro coleccionista"** y
+apunta la cámara a tu código. La app le muestra un resultado en las dos
+direcciones — **"Tus repetidas que a él/ella le faltan"** y **"Sus
+repetidas que a vos te faltan"** — con precios de tu lado y sin que ninguno
+de los dos tenga que mostrar el álbum completo. Como con "Vender a un
+cliente", **este modo nunca modifica tu álbum**; es solo informativo, con un
+botón para copiar el resumen y compartirlo por WhatsApp.
+
+### Tres modos de escaneo
+
+Hay varios botones distintos porque un QR de este tipo se ve igual sea tu
+propio código, el de un cliente o el "QR para intercambiar" de otro
+coleccionista — la app no tiene forma de saber cuál es cuál, así que elegís
+vos la intención tocando el botón correcto:
 
 **📷 "Actualizar mi álbum"** (arriba a la derecha)
 Escaneás **tu propio** QR. La app **agrega** a tu álbum las figuritas nuevas
@@ -199,6 +222,12 @@ mandarla por WhatsApp, y tocar **"Confirmar venta"** para que la app reste 1
 del stock de cada figurita vendida. **Este modo nunca modifica tu álbum de
 figuritas que tenés/te faltan** — solo tu cantidad de repetidas al confirmar
 una venta.
+
+**🔍 "Leer QR de otro coleccionista"** (pestaña 💰 Venta)
+Escaneás el **"QR para intercambiar"** que te muestra otra persona. La app
+compara ese código contra tu álbum en las dos direcciones y te muestra qué
+de tus repetidas le sirven a ella, y qué de las suyas te sirven a vos —
+puramente informativo, sin tocar tu álbum ni tu stock de repetidas.
 
 ### Mejoras del lector (estabilidad)
 

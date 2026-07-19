@@ -126,6 +126,14 @@
         <span class="btn-chip-icon">🤝</span>
         <span>Vender a un cliente (QR)</span>
       </button>
+      <button id="btn-share-trade-qr" class="btn-chip">
+        <span class="btn-chip-icon">🔄</span>
+        <span>Mi QR para intercambiar</span>
+      </button>
+      <button id="btn-scan-trade" class="btn-chip">
+        <span class="btn-chip-icon">🔍</span>
+        <span>Leer QR de otro coleccionista</span>
+      </button>
     </section>
     <div class="venta-filters" role="tablist" aria-label="Filtrar repetidas por tipo">
       <button class="chip-filter" data-kind="all" data-state="on">Todas</button>
@@ -186,7 +194,7 @@
   </section>
 
   <footer class="app-footer">
-    <p>Tus datos se guardan solo en este navegador/celular. <strong>Actualizar mi álbum</strong> lee tu propio QR de la app <strong>Figuritas</strong> y agrega automáticamente lo que te falta, sin borrar nada cargado a mano. <strong>Vender a un cliente</strong> (pestaña Venta) lee el QR de otra persona y te muestra, sin tocar tu álbum, cuáles de tus repetidas le podés separar.</p>
+    <p>Tus datos se guardan solo en este navegador/celular. <strong>Actualizar mi álbum</strong> lee tu propio QR de la app <strong>Figuritas</strong> y agrega automáticamente lo que te falta, sin borrar nada cargado a mano. <strong>Vender a un cliente</strong> (pestaña Venta) lee el QR de otra persona y te muestra, sin tocar tu álbum, cuáles de tus repetidas le podés separar. <strong>Mi QR para intercambiar</strong> es un código distinto, pensado para compartir con otros coleccionistas: al leerlo con <strong>"Leer QR de otro coleccionista"</strong> se ve, en las dos direcciones, qué repetidas de cada uno le sirven al otro.</p>
   </footer>
 </div>
 
@@ -303,6 +311,43 @@
     <p id="export-qr-summary" class="import-stats-caption"></p>
     <div class="modal-actions">
       <button id="export-qr-download" class="btn-ghost">⬇️ Descargar imagen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Trade QR modal: "Mi QR para intercambiar" -->
+<div id="trade-qr-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="trade-qr-title">
+  <div class="modal-panel modal-panel-small">
+    <div class="modal-head">
+      <h2 id="trade-qr-title">Mi QR para intercambiar</h2>
+      <button id="trade-qr-close" class="btn-icon" aria-label="Cerrar">✕</button>
+    </div>
+    <p class="backup-text">
+      Mostrale este código a otro coleccionista. Si lo lee con esta misma app
+      (botón <strong>"Leer QR de otro coleccionista"</strong>), va a ver al
+      toque qué de sus repetidas te sirven a vos y qué de las tuyas le sirven
+      a él o ella — sin que ninguno de los dos tenga que mostrar el álbum
+      completo. No hace falta cámara para vos: alcanza con que la otra
+      persona escanee esta pantalla.
+    </p>
+    <div id="trade-qr-code" class="export-qr-code"></div>
+    <p id="trade-qr-summary" class="import-stats-caption"></p>
+    <div class="modal-actions">
+      <button id="trade-qr-download" class="btn-ghost">⬇️ Descargar imagen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Trade result modal: shown after reading someone else's trade QR -->
+<div id="trade-result-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="trade-result-title">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2 id="trade-result-title">Posible intercambio</h2>
+      <button id="trade-result-close" class="btn-icon" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="trade-result-body"></div>
+    <div class="modal-actions">
+      <button id="trade-result-copy" class="btn-gold">Copiar resumen</button>
     </div>
   </div>
 </div>

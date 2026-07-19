@@ -1090,6 +1090,15 @@ body {
   margin: 4px 0 12px;
 }
 .export-qr-code svg { width: 100%; max-width: 260px; height: auto; display: block; }
+.trade-result-heading {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--chalk-faint);
+  margin: 16px 0 8px;
+}
+.trade-result-heading:first-of-type { margin-top: 4px; }
 .import-note {
   text-align: center;
   font-size: 13px;
