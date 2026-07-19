@@ -347,6 +347,31 @@ cliente (QR)"** (ver arriba): leyendo el QR de esa persona, la app filtra
 sola cuáles de tus repetidas le sirven a ella, y al confirmar la venta resta
 la cantidad automáticamente — no hace falta ir descontando a mano.
 
+## Mostrar QR de pago
+
+En la pestaña **💰 Venta → "💳 Mostrar QR de pago"** podés guardar tu propio
+QR de cobro (Bre-B, Nequi, Daviplata, transferencia bancaria, Mercado Pago,
+etc.) para tenerlo a mano y mostrarlo en el momento en que alguien te
+compre o te separe figuritas — sin tener que salir de la app a buscarlo en
+otro lado.
+
+Cómo funciona:
+
+- Subís una foto o captura del QR (la que te da tu banco/billetera) y,
+  opcionalmente, un texto corto para mostrar debajo (por ejemplo, tu llave
+  o número).
+- La próxima vez que abrís "Mostrar QR de pago" te muestra directamente esa
+  imagen a pantalla completa, lista para que el comprador la escanee con
+  su propia app del banco.
+- Tocá **"✏️ Cambiar"** para subir otra imagen o editar el texto, o
+  **"Eliminar QR guardado"** para borrarlo.
+
+**Privacidad:** esta imagen se guarda **solo en este navegador/celular**
+(en `localStorage`, igual que el resto de tus datos). A propósito **no**
+se incluye en el backup ni en la sincronización entre dispositivos, porque
+es información financiera personal — si usás la app en más de un
+dispositivo, vas a tener que subirla en cada uno por separado.
+
 ## Backup de mis datos
 
 Como todo se guarda en el navegador (`localStorage`), en **⚙️ Ajustes** el botón **"💾 Backup de

@@ -1739,6 +1739,113 @@ function importBackupFile(file) {
   reader.readAsText(file);
 }
 
+// ----------------------------------------------------------------------------
+// "Mostrar QR de pago" — un lugar a mano para tu propio QR de cobro (Bre-B,
+// Nequi, Daviplata, transferencia, etc.), para mostrarlo cuando alguien te
+// compre o te separe figuritas. Es solo una imagen + un texto que vos
+// subís: no se genera nada acá, y se guarda SOLO en este navegador/celular
+// (no viaja en el backup a la nube ni en la sincronización entre
+// dispositivos, porque son datos financieros personales).
+// ----------------------------------------------------------------------------
+const PAYMENT_QR_KEY = "figuritas-payment-qr-v1";
+
+function loadPaymentQr() {
+  try {
+    const raw = localStorage.getItem(PAYMENT_QR_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function savePaymentQr(data) {
+  try {
+    localStorage.setItem(PAYMENT_QR_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error(e);
+    showToast("No pude guardar el QR (¿imagen muy pesada?). Probá con otra foto.");
+  }
+}
+
+function removePaymentQr() {
+  localStorage.removeItem(PAYMENT_QR_KEY);
+}
+
+function renderPaymentQrModal() {
+  const data = loadPaymentQr();
+  const display = document.getElementById("payment-qr-display");
+  const form = document.getElementById("payment-qr-form");
+  const removeBtn = document.getElementById("payment-qr-remove");
+
+  if (data && data.image) {
+    display.classList.remove("hidden");
+    form.classList.add("hidden");
+    removeBtn.classList.remove("hidden");
+    document.getElementById("payment-qr-image-box").innerHTML =
+      `<img src="${data.image}" alt="Mi QR de pago" />`;
+    document.getElementById("payment-qr-label").textContent = data.note || "";
+  } else {
+    display.classList.add("hidden");
+    form.classList.remove("hidden");
+    removeBtn.classList.add("hidden");
+    document.getElementById("payment-qr-note").value = "";
+  }
+}
+
+function setupPaymentQrModal() {
+  const modal = document.getElementById("payment-qr-modal");
+
+  document.getElementById("btn-payment-qr").addEventListener("click", () => {
+    renderPaymentQrModal();
+    modal.classList.remove("hidden");
+  });
+  document.getElementById("payment-qr-close").addEventListener("click", () => {
+    modal.classList.add("hidden");
+  });
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.classList.add("hidden");
+  });
+
+  document.getElementById("payment-qr-edit").addEventListener("click", () => {
+    const data = loadPaymentQr();
+    document.getElementById("payment-qr-display").classList.add("hidden");
+    document.getElementById("payment-qr-form").classList.remove("hidden");
+    document.getElementById("payment-qr-note").value = (data && data.note) || "";
+  });
+
+  document.getElementById("payment-qr-save").addEventListener("click", () => {
+    const fileInput = document.getElementById("payment-qr-file");
+    const note = document.getElementById("payment-qr-note").value.trim();
+    const file = fileInput.files[0];
+    const existing = loadPaymentQr();
+
+    function finish(imageDataUrl) {
+      savePaymentQr({ image: imageDataUrl, note });
+      fileInput.value = "";
+      renderPaymentQrModal();
+      showToast("QR de pago guardado");
+    }
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => finish(reader.result);
+      reader.onerror = () => showToast("No pude leer esa imagen. Probá con otra foto.");
+      reader.readAsDataURL(file);
+    } else if (existing && existing.image) {
+      // No se tocó la imagen, solo se está editando el texto.
+      finish(existing.image);
+    } else {
+      showToast("Subí una imagen primero");
+    }
+  });
+
+  document.getElementById("payment-qr-remove").addEventListener("click", () => {
+    removePaymentQr();
+    renderPaymentQrModal();
+    showToast("QR de pago eliminado");
+  });
+}
+
 function setupBackupModal() {
   const backupModal = document.getElementById("backup-modal");
   document.getElementById("btn-backup").addEventListener("click", () => {
@@ -2678,6 +2785,7 @@ async function init() {
   setupExportQrModal();
   setupTradeQrModal();
   setupTradeResultModal();
+  setupPaymentQrModal();
   setupExtrasTab();
   setupSyncModal();
   initSyncOnBoot();

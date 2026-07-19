@@ -1099,6 +1099,30 @@ body {
   margin: 16px 0 8px;
 }
 .trade-result-heading:first-of-type { margin-top: 4px; }
+
+.payment-qr-image-box { padding: 10px; }
+.payment-qr-image-box img {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto;
+  border-radius: 10px;
+}
+.payment-qr-file-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--pitch-700);
+  color: var(--chalk-dim);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+}
+.payment-qr-note-field { margin-top: 12px; }
+.payment-qr-remove-btn { margin-top: 10px; width: 100%; }
+#payment-qr-display.hidden { display: none; }
+#payment-qr-form.hidden { display: none; }
+.payment-qr-remove-btn.hidden { display: none; }
 .import-note {
   text-align: center;
   font-size: 13px;

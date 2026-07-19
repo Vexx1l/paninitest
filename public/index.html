@@ -134,6 +134,10 @@
         <span class="btn-chip-icon">🔍</span>
         <span>Leer QR de otro coleccionista</span>
       </button>
+      <button id="btn-payment-qr" class="btn-chip">
+        <span class="btn-chip-icon">💳</span>
+        <span>Mostrar QR de pago</span>
+      </button>
     </section>
     <div class="venta-filters" role="tablist" aria-label="Filtrar repetidas por tipo">
       <button class="chip-filter" data-kind="all" data-state="on">Todas</button>
@@ -194,7 +198,7 @@
   </section>
 
   <footer class="app-footer">
-    <p>Tus datos se guardan solo en este navegador/celular. <strong>Actualizar mi álbum</strong> lee tu propio QR de la app <strong>Figuritas</strong> y agrega automáticamente lo que te falta, sin borrar nada cargado a mano. <strong>Vender a un cliente</strong> (pestaña Venta) lee el QR de otra persona y te muestra, sin tocar tu álbum, cuáles de tus repetidas le podés separar. <strong>Mi QR para intercambiar</strong> es compatible con la pestaña "Cambiar" de la app oficial Figuritas, y además, si lo lee otra persona con esta app usando <strong>"Leer QR de otro coleccionista"</strong>, muestra en las dos direcciones qué repetidas de cada uno le sirven al otro.</p>
+    <p>Tus datos se guardan solo en este navegador/celular. <strong>Actualizar mi álbum</strong> lee tu propio QR de la app <strong>Figuritas</strong> y agrega automáticamente lo que te falta, sin borrar nada cargado a mano. <strong>Vender a un cliente</strong> (pestaña Venta) lee el QR de otra persona y te muestra, sin tocar tu álbum, cuáles de tus repetidas le podés separar. <strong>Mi QR para intercambiar</strong> es compatible con la pestaña "Cambiar" de la app oficial Figuritas, y además, si lo lee otra persona con esta app usando <strong>"Leer QR de otro coleccionista"</strong>, muestra en las dos direcciones qué repetidas de cada uno le sirven al otro. <strong>Mostrar QR de pago</strong> guarda una imagen tuya (Bre-B, Nequi, etc.) para mostrarla al cobrar; queda solo en este dispositivo, nunca se sincroniza ni se sube a ningún lado.</p>
   </footer>
 </div>
 
@@ -353,6 +357,46 @@
     <div class="modal-actions">
       <button id="trade-result-copy" class="btn-gold">Copiar resumen</button>
     </div>
+  </div>
+</div>
+
+<!-- Payment QR modal: "Mostrar QR de pago" -->
+<div id="payment-qr-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="payment-qr-title">
+  <div class="modal-panel modal-panel-small">
+    <div class="modal-head">
+      <h2 id="payment-qr-title">Mi QR de pago</h2>
+      <button id="payment-qr-close" class="btn-icon" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div id="payment-qr-display" class="hidden">
+      <div id="payment-qr-image-box" class="export-qr-code payment-qr-image-box"></div>
+      <p id="payment-qr-label" class="import-stats-caption"></p>
+      <div class="modal-actions">
+        <button id="payment-qr-edit" class="btn-ghost">✏️ Cambiar</button>
+      </div>
+    </div>
+
+    <div id="payment-qr-form">
+      <p class="backup-text">
+        Subí una foto o captura de tu QR de pago (Bre-B, Nequi, Daviplata,
+        Mercado Pago, transferencia bancaria, etc.) para tenerlo a mano y
+        mostrarlo cuando alguien te compre o te separe figuritas. Se guarda
+        solo en este navegador/celular — nunca se sube a ningún servidor ni
+        se comparte al sincronizar entre dispositivos.
+      </p>
+      <input id="payment-qr-file" type="file" accept="image/*" class="payment-qr-file-input" />
+      <div class="field-price payment-qr-note-field">
+        <label for="payment-qr-note">Texto debajo del QR (opcional)</label>
+        <input id="payment-qr-note" type="text" placeholder="Ej: Llave 3146482804 / Nequi 3001234567" />
+      </div>
+      <div class="modal-actions">
+        <button id="payment-qr-save" class="btn-gold">Guardar</button>
+      </div>
+    </div>
+
+    <button id="payment-qr-remove" class="btn-ghost btn-ghost-small btn-chip-danger payment-qr-remove-btn hidden">
+      Eliminar QR guardado
+    </button>
   </div>
 </div>
 
