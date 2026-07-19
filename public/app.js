@@ -259,15 +259,39 @@ function renderScoreboard() {
   });
 }
 
+function sectionHasMissing(section) {
+  return section.stickers.some((n) => !getEntry(stickerKey(section.id, n)).owned);
+}
+
+function sectionHasRepeats(section) {
+  return section.stickers.some((n) => {
+    const e = getEntry(stickerKey(section.id, n));
+    return e.owned && e.qty > 1;
+  });
+}
+
 function renderSections() {
   el.sections.innerHTML = "";
 
-  const visible = SECTIONS.filter(matchesSearch);
+  let visible = SECTIONS.filter(matchesSearch);
+  if (onlyMissing) {
+    visible = visible.filter(sectionHasMissing);
+  } else if (onlyRepeats) {
+    visible = visible.filter(sectionHasRepeats);
+  }
 
   if (visible.length === 0) {
-    el.sections.innerHTML = `<div class="empty-state">No encontré ningún equipo con “${escapeHtml(
-      searchQuery
-    )}”.</div>`;
+    let msg;
+    if (searchQuery) {
+      msg = `No encontré ningún equipo con “${escapeHtml(searchQuery)}”.`;
+    } else if (onlyMissing) {
+      msg = "🎉 ¡Completaste todo tu álbum! No te falta ninguna figurita.";
+    } else if (onlyRepeats) {
+      msg = "No tenés repetidas en ningún equipo por ahora.";
+    } else {
+      msg = "No hay figuritas para mostrar.";
+    }
+    el.sections.innerHTML = `<div class="empty-state">${msg}</div>`;
     return;
   }
 
