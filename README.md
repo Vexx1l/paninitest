@@ -180,24 +180,34 @@ avisá para seguir ajustando el formato.
 ### Mi QR para intercambiar
 
 En la pestaña **💰 Venta → "🔄 Mi QR para intercambiar"** hay un código
-**distinto** al de "Exportar QR para Figuritas": no está pensado para la app
-oficial, sino para que lo lea **otro coleccionista que use esta misma app**.
+armado con el mismo formato que "Exportar QR para Figuritas" (compatible
+con la app oficial), pero pensado para intercambios entre coleccionistas en
+vez de para actualizar tu propia app Figuritas. Como usa el mismo formato,
+se puede leer de dos formas:
+
+- **Con la app oficial Figuritas**, desde su pestaña **"Cambiar"** ("Escanea
+  el código QR de tus amigos para descubrir qué figuritas puedes
+  intercambiar") — funciona igual que si fuera tu propio código de esa app.
+- **Con esta misma app**, tocando **"🔍 Leer QR de otro coleccionista"**, que
+  además del intercambio típico calcula el resultado en las **dos
+  direcciones a la vez**.
 
 Sirve para las dos puntas de un intercambio a la vez:
 
-- Si estás buscando láminas, mostrale tu QR a alguien: al leerlo, esa
-  persona ve enseguida cuáles de sus repetidas te sirven a vos.
+- Si estás buscando láminas, mostrale tu QR a alguien: al leerlo (con
+  Figuritas o con esta app), esa persona ve cuáles de sus repetidas te
+  sirven a vos.
 - Si alguien quiere saber qué tenés repetido para ofrecerte algo a cambio,
   con el mismo código ve también cuáles de tus repetidas le sirven a
-  ella/él.
+  ella/él (esto último solo si lo lee con esta app, ya que es la parte que
+  la app oficial no calcula).
 
-Para leerlo, la otra persona toca **"🔍 Leer QR de otro coleccionista"** y
-apunta la cámara a tu código. La app le muestra un resultado en las dos
-direcciones — **"Tus repetidas que a él/ella le faltan"** y **"Sus
-repetidas que a vos te faltan"** — con precios de tu lado y sin que ninguno
-de los dos tenga que mostrar el álbum completo. Como con "Vender a un
-cliente", **este modo nunca modifica tu álbum**; es solo informativo, con un
-botón para copiar el resumen y compartirlo por WhatsApp.
+Cuando lo lee esta app, muestra un resultado en las dos direcciones —
+**"Tus repetidas que a él/ella le faltan"** y **"Sus repetidas que a vos te
+faltan"** — con precios de tu lado y sin que ninguno de los dos tenga que
+mostrar el álbum completo. Como con "Vender a un cliente", **este modo
+nunca modifica tu álbum**; es solo informativo, con un botón para copiar el
+resumen y compartirlo por WhatsApp.
 
 ### Tres modos de escaneo
 

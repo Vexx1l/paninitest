@@ -1826,16 +1826,20 @@ function buildFiguritasExportPayload() {
   return { text, pegadas, repetidas };
 }
 
-// "Mi QR para intercambiar" — a QR that is NOT meant for the official
-// Figuritas app. It reuses the same bitmap/segment encoding (so we can reuse
-// the same gzip+base64 helpers and the same decoder), but swaps the official
-// album header for our own short marker, so this app can tell the two
-// formats apart if it ever needs to (e.g. to show a clearer error message).
-const TRADE_QR_MARKER = "PANINITRADE1";
+// "Mi QR para intercambiar" uses the EXACT same encoding as "Exportar QR
+// para Figuritas" — same official album header, same bitmap/segments — so
+// it's a real, valid Figuritas QR. That means it can be scanned by either:
+//   - the official Figuritas app itself, in its "Cambiar" (trade) screen
+//     ("Escanea el código QR de tus amigos para descubrir qué figuritas
+//     puedes intercambiar"), or
+//   - this app's own "Leer QR de otro coleccionista", which shows the
+//     two-way match (what I can give them + what they can give me).
+// It's kept as its own named function (rather than reusing
+// buildFiguritasExportPayload() directly at the call site) purely so the
+// two features read clearly as separate in the code, even though today
+// they produce byte-identical output.
 function buildTradeQrPayload() {
-  const { segments, pegadas, repetidas } = buildOwnedBitmapSegments();
-  const text = TRADE_QR_MARKER + ";" + segments.join(";");
-  return { text, pegadas, repetidas };
+  return buildFiguritasExportPayload();
 }
 
 function setupExportQrModal() {
