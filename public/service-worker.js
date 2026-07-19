@@ -11,6 +11,7 @@ const APP_SHELL = [
   "./style.css",
   "./app.js",
   "./sections.json",
+  "./extras-data.json",
   "./firebase-config.js",
   "./manifest.webmanifest",
   "./vendor/jsQR.js",

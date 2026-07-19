@@ -212,6 +212,7 @@ const el = {
     album: document.getElementById("view-album"),
     venta: document.getElementById("view-venta"),
     stats: document.getElementById("view-stats"),
+    extras: document.getElementById("view-extras"),
     settings: document.getElementById("view-settings"),
   },
   ventaFilters: document.querySelectorAll(".chip-filter"),
@@ -506,6 +507,7 @@ function renderAll() {
   updateVentaBadge();
   if (currentView === "venta") renderVenta();
   if (currentView === "stats") renderStats();
+  if (currentView === "extras") renderExtras();
 }
 
 // ----------------------------------------------------------------------------
@@ -816,6 +818,397 @@ function renderStats() {
 }
 
 // ----------------------------------------------------------------------------
+// Extra Stickers — set especial de 20 jugadores x 4 categorías (Base, Bronce,
+// Plata, Oro). Los datos base (roster + tus valores originales) vienen de
+// extras-data.json, que se generó a partir del Excel que subiste. Una vez
+// cargado acá, lo que edites vive en localStorage (y se sincroniza entre
+// dispositivos junto con el resto del álbum, si tenés Sincronizar activado).
+// ----------------------------------------------------------------------------
+const EXTRAS_STORAGE_KEY = "figuritas-extras-v1";
+const EXTRAS_CATS = [
+  { key: "base", label: "Base", short: "BASE" },
+  { key: "bronce", label: "Bronce", short: "BRONCE" },
+  { key: "plata", label: "Plata", short: "PLATA" },
+  { key: "oro", label: "Oro", short: "ORO" },
+];
+
+/** @type {Array<{code:string, country:string, player:string, categories:Object}>} */
+let EXTRAS_PLAYERS = [];
+
+/** extrasState[code][catKey] = { qty:number, target:number, note:string } */
+let extrasState = {};
+
+async function loadExtrasData() {
+  try {
+    const res = await fetch("./extras-data.json");
+    EXTRAS_PLAYERS = await res.json();
+  } catch (e) {
+    console.error("No se pudo cargar extras-data.json", e);
+    EXTRAS_PLAYERS = [];
+  }
+}
+
+function loadExtrasState() {
+  try {
+    const raw = localStorage.getItem(EXTRAS_STORAGE_KEY);
+    extrasState = raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.error("No se pudo leer el set de Extra Stickers guardado", e);
+    extrasState = {};
+  }
+  ensureExtrasSeeded();
+}
+
+// La primera vez (o si aparece un jugador/categoría nuevo que todavía no
+// está guardado), lo sembramos con los valores originales del Excel que
+// subiste — así no perdés lo que ya tenías cargado ahí.
+function ensureExtrasSeeded() {
+  for (const p of EXTRAS_PLAYERS) {
+    if (!extrasState[p.code]) extrasState[p.code] = {};
+    for (const cat of EXTRAS_CATS) {
+      if (!extrasState[p.code][cat.key]) {
+        const src = p.categories?.[cat.key] || {};
+        extrasState[p.code][cat.key] = {
+          qty: Number.isFinite(src.qty) ? src.qty : 0,
+          target: Number.isFinite(src.target) && src.target > 0 ? src.target : 1,
+          note: src.note || "",
+        };
+      }
+    }
+  }
+}
+
+function saveExtrasState() {
+  try {
+    localStorage.setItem(EXTRAS_STORAGE_KEY, JSON.stringify(extrasState));
+  } catch (e) {
+    console.error("No se pudo guardar el set de Extra Stickers", e);
+    showToast("No se pudo guardar (¿modo privado?)");
+  }
+  scheduleCloudPush();
+}
+
+function getExtrasEntry(code, catKey) {
+  if (!extrasState[code]) extrasState[code] = {};
+  if (!extrasState[code][catKey]) extrasState[code][catKey] = { qty: 0, target: 1, note: "" };
+  return extrasState[code][catKey];
+}
+
+function setExtrasQty(code, catKey, qty) {
+  const entry = getExtrasEntry(code, catKey);
+  entry.qty = Math.max(0, Math.min(999, Math.round(qty) || 0));
+}
+
+function setExtrasTarget(code, catKey, target) {
+  const entry = getExtrasEntry(code, catKey);
+  entry.target = Math.max(1, Math.min(999, Math.round(target) || 1));
+}
+
+function setExtrasNote(code, catKey, note) {
+  const entry = getExtrasEntry(code, catKey);
+  entry.note = note;
+}
+
+function computeExtrasSummary() {
+  const byCat = {};
+  for (const cat of EXTRAS_CATS) byCat[cat.key] = { total: 0, target: 0 };
+  let grandTotal = 0,
+    grandTarget = 0,
+    playersComplete = 0;
+
+  for (const p of EXTRAS_PLAYERS) {
+    let complete = true;
+    for (const cat of EXTRAS_CATS) {
+      const e = getExtrasEntry(p.code, cat.key);
+      byCat[cat.key].total += e.qty;
+      byCat[cat.key].target += e.target;
+      grandTotal += e.qty;
+      grandTarget += e.target;
+      if (e.qty < e.target) complete = false;
+    }
+    if (complete) playersComplete++;
+  }
+  return { byCat, grandTotal, grandTarget, playersComplete, playersTotal: EXTRAS_PLAYERS.length };
+}
+
+function renderExtras() {
+  const listEl = document.getElementById("extras-list");
+  const summaryEl = document.getElementById("extras-summary");
+  if (!listEl || !summaryEl) return;
+
+  const { byCat, playersComplete, playersTotal } = computeExtrasSummary();
+
+  summaryEl.innerHTML =
+    EXTRAS_CATS.map((cat) => {
+      const c = byCat[cat.key];
+      const faltan = Math.max(0, c.target - c.total);
+      return `<div class="result-stat extras-cat-summary extras-cat-summary-${cat.key}">
+        <b>${c.total}/${c.target}</b><span>${cat.short}${faltan ? ` · FALTAN ${faltan}` : " ✓"}</span>
+      </div>`;
+    }).join("") +
+    `<div class="result-stat extras-cat-summary-players"><b>${playersComplete}/${playersTotal}</b><span>JUGADORES COMPLETOS</span></div>`;
+
+  listEl.innerHTML = EXTRAS_PLAYERS.map((p) => {
+    const allComplete = EXTRAS_CATS.every((cat) => {
+      const e = getExtrasEntry(p.code, cat.key);
+      return e.qty >= e.target;
+    });
+    return `
+    <div class="extras-player" data-code="${p.code}">
+      <div class="extras-player-head">
+        <span class="extras-player-flag">${escapeHtml(p.code)}</span>
+        <div class="extras-player-id">
+          <div class="extras-player-name">${escapeHtml(p.player)}</div>
+          <div class="extras-player-country">${escapeHtml(p.country)}</div>
+        </div>
+        ${allComplete ? `<span class="extras-player-status">✓ Completo</span>` : ""}
+      </div>
+      <div class="extras-cats">
+        ${EXTRAS_CATS.map((cat) => {
+          const e = getExtrasEntry(p.code, cat.key);
+          const done = e.qty >= e.target;
+          return `
+          <div class="extras-cat extras-cat-${cat.key}${done ? " extras-cat-done" : ""}" data-cat="${cat.key}">
+            <span class="extras-cat-label">${cat.label}</span>
+            <div class="extras-stepper">
+              <button type="button" class="extras-qty-btn" data-action="dec" aria-label="Restar ${cat.label}">–</button>
+              <span class="extras-qty-value">${e.qty}</span>
+              <button type="button" class="extras-qty-btn" data-action="inc" aria-label="Sumar ${cat.label}">+</button>
+            </div>
+            <span class="extras-target">
+              / <input type="number" class="extras-target-input" min="1" max="999" value="${e.target}" aria-label="Objetivo de ${cat.label}" />
+            </span>
+          </div>`;
+        }).join("")}
+      </div>
+      <input type="text" class="extras-note" placeholder="Nota (opcional)" value="${escapeHtml(
+        // una sola nota visible por jugador: guardamos la primera no vacía, o vacío
+        Object.values(extrasState[p.code] || {}).find((e) => e.note)?.note || ""
+      )}" />
+    </div>`;
+  }).join("");
+
+  // Delegación de eventos: un solo listener por gesto en vez de 20×(4+extras) listeners.
+  listEl.querySelectorAll(".extras-player").forEach((playerEl) => {
+    const code = playerEl.dataset.code;
+
+    playerEl.querySelectorAll(".extras-cat").forEach((catEl) => {
+      const catKey = catEl.dataset.cat;
+      const valueEl = catEl.querySelector(".extras-qty-value");
+      const targetInput = catEl.querySelector(".extras-target-input");
+
+      function refreshDoneStyle() {
+        const e = getExtrasEntry(code, catKey);
+        catEl.classList.toggle("extras-cat-done", e.qty >= e.target);
+      }
+
+      catEl.querySelector('[data-action="dec"]').addEventListener("click", () => {
+        const e = getExtrasEntry(code, catKey);
+        setExtrasQty(code, catKey, e.qty - 1);
+        valueEl.textContent = getExtrasEntry(code, catKey).qty;
+        refreshDoneStyle();
+        saveExtrasState();
+        renderExtrasSummaryOnly();
+        refreshExtrasPlayerStatus(playerEl, code);
+      });
+      catEl.querySelector('[data-action="inc"]').addEventListener("click", () => {
+        const e = getExtrasEntry(code, catKey);
+        setExtrasQty(code, catKey, e.qty + 1);
+        valueEl.textContent = getExtrasEntry(code, catKey).qty;
+        refreshDoneStyle();
+        saveExtrasState();
+        renderExtrasSummaryOnly();
+        refreshExtrasPlayerStatus(playerEl, code);
+      });
+      targetInput.addEventListener("change", () => {
+        setExtrasTarget(code, catKey, Number(targetInput.value));
+        targetInput.value = getExtrasEntry(code, catKey).target;
+        refreshDoneStyle();
+        saveExtrasState();
+        renderExtrasSummaryOnly();
+        refreshExtrasPlayerStatus(playerEl, code);
+      });
+    });
+
+    const noteInput = playerEl.querySelector(".extras-note");
+    noteInput.addEventListener("change", () => {
+      // Guardamos la misma nota en las 4 categorías del jugador (es una nota
+      // por jugador, no por categoría — más simple de usar).
+      for (const cat of EXTRAS_CATS) setExtrasNote(code, cat.key, noteInput.value);
+      saveExtrasState();
+    });
+  });
+}
+
+// Solo redibuja las tarjetas de resumen de arriba (mucho más liviano que
+// renderExtras() completo) — se usa después de cada +/-/objetivo tocado.
+function renderExtrasSummaryOnly() {
+  const summaryEl = document.getElementById("extras-summary");
+  if (!summaryEl) return;
+  const { byCat, playersComplete, playersTotal } = computeExtrasSummary();
+  summaryEl.innerHTML =
+    EXTRAS_CATS.map((cat) => {
+      const c = byCat[cat.key];
+      const faltan = Math.max(0, c.target - c.total);
+      return `<div class="result-stat extras-cat-summary extras-cat-summary-${cat.key}">
+        <b>${c.total}/${c.target}</b><span>${cat.short}${faltan ? ` · FALTAN ${faltan}` : " ✓"}</span>
+      </div>`;
+    }).join("") +
+    `<div class="result-stat extras-cat-summary-players"><b>${playersComplete}/${playersTotal}</b><span>JUGADORES COMPLETOS</span></div>`;
+}
+
+function refreshExtrasPlayerStatus(playerEl, code) {
+  const allComplete = EXTRAS_CATS.every((cat) => {
+    const e = getExtrasEntry(code, cat.key);
+    return e.qty >= e.target;
+  });
+  let statusEl = playerEl.querySelector(".extras-player-status");
+  if (allComplete && !statusEl) {
+    statusEl = document.createElement("span");
+    statusEl.className = "extras-player-status";
+    statusEl.textContent = "✓ Completo";
+    playerEl.querySelector(".extras-player-head").appendChild(statusEl);
+  } else if (!allComplete && statusEl) {
+    statusEl.remove();
+  }
+}
+
+function resetExtrasToOriginal() {
+  const ok = confirm(
+    "Esto va a reemplazar lo que cargaste en Extras por los valores originales del Excel que subiste (Cantidad, Objetivo y Notas). ¿Seguir?"
+  );
+  if (!ok) return;
+  extrasState = {};
+  ensureExtrasSeeded();
+  saveExtrasState();
+  renderExtras();
+  showToast("Extras restaurado a los valores del Excel");
+}
+
+// Exporta el estado actual a un .xlsx con la misma estructura que el Excel
+// original (Conteo / Resumen / Faltantes / Guía), para tener un respaldo o
+// compartirlo. Carga SheetJS recién al tocar el botón, para no pesar el
+// arranque de la app con una librería de ~440kb que la mayoría de las
+// visitas no va a usar.
+let xlsxLibPromise = null;
+function ensureXlsxLib() {
+  if (window.XLSX) return Promise.resolve();
+  if (!xlsxLibPromise) {
+    xlsxLibPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "./vendor/xlsx.core.min.js";
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("No se pudo cargar la librería de Excel"));
+      document.head.appendChild(script);
+    });
+  }
+  return xlsxLibPromise;
+}
+
+async function exportExtrasToExcel() {
+  try {
+    await ensureXlsxLib();
+  } catch (e) {
+    showToast("No se pudo cargar el exportador de Excel (revisá tu conexión)");
+    return;
+  }
+
+  const catLabel = { base: "Base (Purple)", bronce: "Bronce", plata: "Plata", oro: "Oro" };
+
+  // Hoja "Conteo"
+  const conteoRows = [
+    ["EXTRA STICKERS · PANINI MUNDIAL 2026"],
+    ["Conteo de figuritas extra por jugador y categoría — edita la columna 'Cantidad'"],
+    [],
+    ["Sel.", "País", "Jugador", "Categoría", "Cantidad", "Objetivo\n(set completo)", "Faltan", "Notas"],
+  ];
+  let totalQty = 0,
+    totalTarget = 0,
+    totalFaltan = 0;
+  for (const p of EXTRAS_PLAYERS) {
+    for (const cat of EXTRAS_CATS) {
+      const e = getExtrasEntry(p.code, cat.key);
+      const faltan = Math.max(0, e.target - e.qty);
+      totalQty += e.qty;
+      totalTarget += e.target;
+      totalFaltan += faltan;
+      conteoRows.push([p.code, p.country, p.player, catLabel[cat.key], e.qty, e.target, faltan, e.note || ""]);
+    }
+  }
+  conteoRows.push(["TOTAL GENERAL", "", "", "", totalQty, totalTarget, totalFaltan, ""]);
+
+  // Hoja "Resumen"
+  const { byCat } = computeExtrasSummary();
+  const resumenRows = [
+    ["RESUMEN POR CATEGORÍA"],
+    [],
+    ["Categoría", "Total acumulado", "Objetivo", "Faltan"],
+    ...EXTRAS_CATS.map((cat) => [
+      catLabel[cat.key],
+      byCat[cat.key].total,
+      byCat[cat.key].target,
+      Math.max(0, byCat[cat.key].target - byCat[cat.key].total),
+    ]),
+    [],
+    ["RESUMEN POR JUGADOR"],
+    ["País", "Jugador", "Base", "Bronce", "Plata", "Oro", "Total jugador"],
+  ];
+  for (const p of EXTRAS_PLAYERS) {
+    const qtys = EXTRAS_CATS.map((cat) => getExtrasEntry(p.code, cat.key).qty);
+    resumenRows.push([p.country, p.player, ...qtys, qtys.reduce((a, b) => a + b, 0)]);
+  }
+  resumenRows.push([
+    "TOTAL GENERAL",
+    "",
+    ...EXTRAS_CATS.map((cat) => byCat[cat.key].total),
+    EXTRAS_CATS.reduce((sum, cat) => sum + byCat[cat.key].total, 0),
+  ]);
+
+  // Hoja "Faltantes"
+  const faltantesRows = [
+    ["FALTANTES POR JUGADOR"],
+    ["Categorías que le faltan a cada jugador para completar el set (según lo cargado en la app)"],
+    ["País", "Jugador", "Faltan (categorías)"],
+  ];
+  for (const p of EXTRAS_PLAYERS) {
+    const missing = EXTRAS_CATS.filter((cat) => {
+      const e = getExtrasEntry(p.code, cat.key);
+      return e.qty < e.target;
+    }).map((cat) => cat.label);
+    faltantesRows.push([p.country, p.player, missing.length ? missing.join(", ") : "Completo ✓"]);
+  }
+
+  // Hoja "Guía" (igual a la del Excel original)
+  const guiaRows = [
+    ["GUÍA RÁPIDA"],
+    [],
+    ["Hoja 'Conteo'", "Registrás cuántas figuritas tenés de cada jugador y categoría desde la app, pestaña Extras."],
+    ["Columna 'Objetivo'", "Por defecto está en 1 (una de cada). Se puede cambiar para acumular más de una por categoría/jugador."],
+    ["Columna 'Faltan'", "Se calcula sola."],
+    ["Hoja 'Resumen'", "Totales automáticos por categoría (Base/Bronce/Plata/Oro) y por jugador."],
+    ["4 categorías", "Base (Purple) = la menos rara · Bronce · Plata · Oro = la más rara."],
+    ["20 jugadores", "Uno por selección, según el listado oficial de Extra Stickers del Mundial 2026."],
+    [],
+    ["Exportado desde", "Álbum Mundial 2026 (app), " + new Date().toLocaleString("es-AR")],
+  ];
+
+  const wb = window.XLSX.utils.book_new();
+  window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.aoa_to_sheet(conteoRows), "Conteo");
+  window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.aoa_to_sheet(resumenRows), "Resumen");
+  window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.aoa_to_sheet(faltantesRows), "Faltantes");
+  window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.aoa_to_sheet(guiaRows), "Guía");
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  window.XLSX.writeFile(wb, `extra-stickers-mundial-2026-${stamp}.xlsx`);
+  showToast("Excel descargado");
+}
+
+function setupExtrasTab() {
+  document.getElementById("btn-extras-export").addEventListener("click", exportExtrasToExcel);
+  document.getElementById("btn-extras-reset").addEventListener("click", resetExtrasToOriginal);
+}
+
+// ----------------------------------------------------------------------------
 // Navegación por pestañas
 // ----------------------------------------------------------------------------
 function switchView(name) {
@@ -831,6 +1224,7 @@ function switchView(name) {
   });
   if (name === "venta") renderVenta();
   if (name === "stats") renderStats();
+  if (name === "extras") renderExtras();
 }
 
 function setupTabs() {
@@ -1075,6 +1469,7 @@ async function pushToCloud(code) {
     state: JSON.stringify(state),
     priceCommon: getCommonPrice(),
     pricePremium: getPremiumPrice(),
+    extrasState: JSON.stringify(extrasState),
     updatedAt: now,
   });
   updateSyncStatus(`Subido a la nube · ${new Date(now).toLocaleTimeString("es-AR")}`);
@@ -1102,6 +1497,14 @@ function applyRemoteData(data) {
   applyingRemoteChange = true;
   try {
     state = JSON.parse(data.state || "{}");
+    if (typeof data.extrasState === "string") {
+      try {
+        extrasState = JSON.parse(data.extrasState);
+        ensureExtrasSeeded();
+      } catch (e) {
+        console.error("No se pudo aplicar el Extras recibido de la nube", e);
+      }
+    }
     if (typeof data.priceCommon === "number") {
       localStorage.setItem(PRICE_COMMON_KEY, data.priceCommon);
       el.priceCommon.value = data.priceCommon;
@@ -1112,6 +1515,7 @@ function applyRemoteData(data) {
     }
     refreshPriceLegend();
     saveState();
+    saveExtrasState();
     renderAll();
   } finally {
     applyingRemoteChange = false;
@@ -1251,6 +1655,7 @@ function exportBackup() {
     state,
     priceCommon: getCommonPrice(),
     pricePremium: getPremiumPrice(),
+    extrasState,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: "application/json",
@@ -1294,6 +1699,11 @@ function importBackupFile(file) {
     if (typeof parsed.pricePremium === "number") {
       localStorage.setItem(PRICE_PREMIUM_KEY, parsed.pricePremium);
       el.pricePremium.value = parsed.pricePremium;
+    }
+    if (parsed.extrasState && typeof parsed.extrasState === "object") {
+      extrasState = parsed.extrasState;
+      ensureExtrasSeeded();
+      saveExtrasState();
     }
     refreshPriceLegend();
     saveState();
@@ -1989,6 +2399,8 @@ if ("serviceWorker" in navigator) {
 async function init() {
   loadState();
   await loadSections();
+  await loadExtrasData();
+  loadExtrasState();
   setupToolbar();
   setupTabs();
   setupVenta();
@@ -1996,6 +2408,7 @@ async function init() {
   setupSellModal();
   setupBackupModal();
   setupExportQrModal();
+  setupExtrasTab();
   setupSyncModal();
   initSyncOnBoot();
   renderAll();

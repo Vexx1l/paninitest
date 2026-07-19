@@ -1,0 +1,542 @@
+[
+  {
+    "code": "ARG",
+    "country": "Argentina",
+    "player": "Lionel Messi",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 0,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 0,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "BEL",
+    "country": "Bélgica",
+    "player": "Jérémy Doku",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "BRA",
+    "country": "Brasil",
+    "player": "Vinícius Júnior",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 1,
+        "target": 1,
+        "note": "Puede conseguirse"
+      },
+      "oro": {
+        "qty": 0,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "CAN",
+    "country": "Canadá",
+    "player": "Alphonso Davies",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": "Puede conseguirse"
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "COL",
+    "country": "Colombia",
+    "player": "Luis Díaz",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 0,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "CRO",
+    "country": "Croacia",
+    "player": "Luka Modrić",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "ECU",
+    "country": "Ecuador",
+    "player": "Moisés Caicedo",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 1,
+        "target": 1,
+        "note": "Puede conseguirse"
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "EGY",
+    "country": "Egipto",
+    "player": "Mohamed Salah",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 0,
+        "target": 1,
+        "note": "Puede conseguirse"
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "ENG",
+    "country": "Inglaterra",
+    "player": "Jude Bellingham",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 0,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "FRA",
+    "country": "Francia",
+    "player": "Kylian Mbappé",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "GER",
+    "country": "Alemania",
+    "player": "Florian Wirtz",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 0,
+        "target": 1,
+        "note": "Puede conseguirse"
+      }
+    }
+  },
+  {
+    "code": "KOR",
+    "country": "Corea del Sur",
+    "player": "Heungmin Son",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 0,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "MEX",
+    "country": "México",
+    "player": "Raúl Jiménez",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": "Puede conseguirse"
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 1,
+        "target": 1,
+        "note": "Puede conseguirse"
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": "Puede conseguirse"
+      }
+    }
+  },
+  {
+    "code": "MAR",
+    "country": "Marruecos",
+    "player": "Achraf Hakimi",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "NED",
+    "country": "Países Bajos",
+    "player": "Cody Gakpo",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 1,
+        "target": 1,
+        "note": "Puede conseguirse"
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "NOR",
+    "country": "Noruega",
+    "player": "Erling Haaland",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 0,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "POR",
+    "country": "Portugal",
+    "player": "Cristiano Ronaldo",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 0,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "ESP",
+    "country": "España",
+    "player": "Lamine Yamal",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "URU",
+    "country": "Uruguay",
+    "player": "Federico Valverde",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 0,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 0,
+        "target": 1,
+        "note": ""
+      }
+    }
+  },
+  {
+    "code": "USA",
+    "country": "Estados Unidos",
+    "player": "Christian Pulisic",
+    "categories": {
+      "base": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "bronce": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "plata": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      },
+      "oro": {
+        "qty": 1,
+        "target": 1,
+        "note": ""
+      }
+    }
+  }
+]

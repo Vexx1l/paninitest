@@ -332,6 +332,157 @@ body {
 }
 .stats-team-count { font-family: var(--font-mono); font-size: 12px; color: var(--chalk-faint); text-align: right; }
 
+/* ===== Extras tab (Extra Stickers) ===== */
+.extras-summary-grid { margin: 0 16px 4px; }
+.extras-cat-summary-base b { color: var(--chalk); }
+.extras-cat-summary-bronce b { color: #d9975c; }
+.extras-cat-summary-plata b { color: #cfd7de; }
+.extras-cat-summary-oro b { color: var(--gold-bright); }
+.extras-cat-summary-players { grid-column: span 2; }
+
+.extras-toolbar { margin: 12px 16px; display: flex; gap: 8px; }
+.extras-toolbar .btn-ghost-small { flex: 1 1 auto; }
+
+.extras-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 16px 24px;
+}
+.extras-player {
+  background: var(--pitch-700);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+.extras-player-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.extras-player-flag {
+  flex: none;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--gold-bright);
+  background: rgba(227, 179, 65, 0.12);
+  border: 1px solid rgba(227, 179, 65, 0.35);
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+.extras-player-id { flex: 1; min-width: 0; }
+.extras-player-name {
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  color: var(--chalk);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.extras-player-country { font-size: 11.5px; color: var(--chalk-faint); }
+.extras-player-status {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold-bright);
+  white-space: nowrap;
+}
+
+.extras-cats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+@media (min-width: 520px) {
+  .extras-cats { grid-template-columns: repeat(4, 1fr); }
+}
+.extras-cat {
+  background: var(--pitch-800);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.extras-cat-done { border-color: rgba(227, 179, 65, 0.5); background: rgba(227, 179, 65, 0.08); }
+.extras-cat-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--chalk-dim);
+}
+.extras-cat-bronce .extras-cat-label { color: #d9975c; }
+.extras-cat-plata .extras-cat-label { color: #cfd7de; }
+.extras-cat-oro .extras-cat-label { color: var(--gold-bright); }
+
+.extras-stepper { display: flex; align-items: center; gap: 6px; }
+.extras-qty-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--pitch-700);
+  color: var(--chalk-dim);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.extras-qty-btn:hover { border-color: var(--gold); color: var(--chalk); }
+.extras-qty-value {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--chalk);
+  min-width: 16px;
+  text-align: center;
+}
+.extras-target {
+  font-size: 11px;
+  color: var(--chalk-faint);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.extras-target-input {
+  width: 26px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--line);
+  color: var(--chalk-dim);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: center;
+  padding: 0 0 1px;
+}
+.extras-target-input:focus { outline: none; border-bottom-color: var(--gold); color: var(--chalk); }
+/* Firefox/Chrome number spinner arrows just add noise at this size */
+.extras-target-input::-webkit-outer-spin-button,
+.extras-target-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.extras-target-input[type="number"] { -moz-appearance: textfield; }
+
+.extras-note {
+  margin-top: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--pitch-800);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--chalk);
+  font-size: 12.5px;
+  font-family: var(--font-body);
+}
+.extras-note::placeholder { color: var(--chalk-faint); }
+.extras-note:focus { outline: none; border-color: var(--gold); }
+
 /* ===== Ajustes tab ===== */
 .quick-actions-vertical { flex-direction: column; margin: 0 16px; }
 .quick-actions-vertical .btn-chip { flex: 1 1 auto; justify-content: flex-start; padding: 14px 14px; }

@@ -93,6 +93,25 @@ Si actualizás el sitio en Vercel más adelante, puede que tengas que cerrar
 del todo la app instalada (deslizarla para cerrarla, no solo minimizarla) y
 volver a abrirla una o dos veces para que tome la versión nueva.
 
+## 🌟 Extras (Extra Stickers)
+
+Pestaña nueva para llevar el set especial "Extra Stickers" (20 jugadores ×
+4 categorías: Base, Bronce, Plata, Oro) — los mismos datos que estaban en
+`Extra_Stickers_Mundial_2026.xlsx`. La primera vez que abrís la pestaña, se
+carga con los valores exactos de ese Excel (`public/extras-data.json`); a
+partir de ahí, todo lo que edites se guarda en este dispositivo y se
+sincroniza con el resto del álbum (nube / backup) si tenés eso configurado.
+
+- **−/+** en cada categoría para cargar cuántas tenés.
+- El número después de la barra (ej. `1/1`) es tu objetivo — tocalo para
+  cambiarlo si querés juntar más de una.
+- Nota opcional por jugador.
+- **⬇️ Exportar a Excel**: descarga un `.xlsx` nuevo con la misma
+  estructura del original (Conteo/Resumen/Faltantes/Guía), con tus datos
+  actuales — útil como respaldo o para compartir.
+- **Reiniciar**: vuelve a cargar los valores originales del Excel que
+  subiste, por si querés empezar de nuevo desde ahí.
+
 ## Precios automáticos
 
 
@@ -310,6 +329,7 @@ public/
   style.css             → estilos (tema "marcador de estadio")
   app.js                → toda la lógica: estado, render, lector de QR, sync, backup
   sections.json         → checklist completo de las 980 figuritas del álbum
+  extras-data.json      → roster + valores originales del set "Extra Stickers"
   firebase-config.js    → acá pegás los datos de tu proyecto de Firebase (opcional)
   manifest.webmanifest  → metadata de la PWA (nombre, ícono, colores)
   service-worker.js     → cachea el "cascarón" de la app para que sea instalable

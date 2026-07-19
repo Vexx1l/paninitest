@@ -77,6 +77,9 @@
     <button class="tab-btn" data-view="stats">
       <span class="tab-icon">📊</span><span>Estadísticas</span>
     </button>
+    <button class="tab-btn" data-view="extras">
+      <span class="tab-icon">🌟</span><span>Extras</span>
+    </button>
     <button class="tab-btn" data-view="settings">
       <span class="tab-icon">⚙️</span><span>Ajustes</span>
     </button>
@@ -141,6 +144,22 @@
   <section id="view-stats" class="view hidden">
     <div id="stats-cards" class="result-stat-grid stats-cards"></div>
     <div id="stats-teams" class="stats-teams"></div>
+  </section>
+
+  <!-- ==================== EXTRA STICKERS ==================== -->
+  <section id="view-extras" class="view hidden">
+    <p class="price-legend">
+      Figuritas especiales (Base, Bronce, Plata, Oro) de los 20 jugadores del
+      set "Extra Stickers". Tocá <strong>−</strong>/<strong>+</strong> para
+      cargar cuántas tenés de cada categoría; el número después de la barra
+      es tu objetivo (por defecto 1, tocalo para cambiarlo).
+    </p>
+    <div id="extras-summary" class="result-stat-grid extras-summary-grid"></div>
+    <div class="toolbar-actions extras-toolbar">
+      <button id="btn-extras-export" class="btn-ghost btn-ghost-small">⬇️ Exportar a Excel</button>
+      <button id="btn-extras-reset" class="btn-ghost btn-ghost-small btn-chip-danger">Reiniciar</button>
+    </div>
+    <div id="extras-list" class="extras-list"></div>
   </section>
 
   <!-- ==================== AJUSTES ==================== -->
