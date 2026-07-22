@@ -347,6 +347,37 @@ cliente (QR)"** (ver arriba): leyendo el QR de esa persona, la app filtra
 sola cuáles de tus repetidas le sirven a ella, y al confirmar la venta resta
 la cantidad automáticamente — no hace falta ir descontando a mano.
 
+## Pegar lista de faltantes
+
+A veces la otra persona no te va a mostrar un QR, sino que te pasa por
+WhatsApp (o donde sea) el texto que exporta la app Figuritas con su lista
+de faltantes, algo así:
+
+```
+Figuritas App - Lista
+Usa Méx Can 26
+Me faltan
+FWC 🌎: 7
+MEX 🇲🇽: 19
+USA 🇺🇸: 4, 13
+...
+```
+
+En **💰 Venta → "📋 Pegar lista de faltantes"** podés pegar ese texto tal
+cual (con emojis, saltos de línea, todo) y tocar **"Verificar"**. La app:
+
+- Reconoce cada línea `CÓDIGO: números` (por ejemplo `MEX: 19` o
+  `USA: 4, 13`) sin importar el emoji de bandera que tenga al lado.
+- Busca esas figuritas en tu álbum y te muestra, en la misma ventana de
+  "Vender", cuáles de tus **repetidas** le sirven a esa persona — con
+  precio y todo, igual que si hubieras escaneado su QR.
+- Te avisa si alguna línea o código no lo pudo reconocer, por si el
+  formato del mensaje viene distinto al esperado.
+
+Como con "Vender a un cliente", **este modo tampoco toca tu álbum**: solo
+te muestra el resultado. Si confirmás la venta desde ahí, ahí sí se
+descuenta la cantidad de tus repetidas, igual que con el flujo del QR.
+
 ## Mostrar QR de pago
 
 En la pestaña **💰 Venta → "💳 Mostrar QR de pago"** podés guardar tu propio

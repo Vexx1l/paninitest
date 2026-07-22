@@ -1268,13 +1268,12 @@ function setupTabs() {
 // ----------------------------------------------------------------------------
 let sellRows = []; // flat list of {key, num, sectionLabel, sectionEmoji, kind, price, checkbox}
 
-function showSellPreview(clientOwnedList) {
-  const { bySection } = computeSellToClient(clientOwnedList);
+function showSellPreview(bySection) {
   sellRows = [];
   sellList.innerHTML = "";
 
   if (bySection.length === 0) {
-    sellList.innerHTML = `<div class="repeats-empty">No tenés ninguna repetida que a este cliente le falte. Nada para venderle por ahora — ¡probá con otro código!</div>`;
+    sellList.innerHTML = `<div class="repeats-empty">No tenés ninguna repetida que le sirva a esta persona por ahora.</div>`;
   } else {
     for (const { section, rows } of bySection) {
       const teamBlock = document.createElement("div");
@@ -1843,6 +1842,185 @@ function setupPaymentQrModal() {
     removePaymentQr();
     renderPaymentQrModal();
     showToast("QR de pago eliminado");
+  });
+}
+
+// ----------------------------------------------------------------------------
+// "Pegar lista de faltantes" — para cuando un comprador te manda por
+// WhatsApp/texto la lista de "Me faltan" que exporta la app Figuritas, en
+// vez de (o además de) mostrarte un QR. La comparamos contra nuestro
+// inventario igual que en "Vender a un cliente", pero partiendo de su lista
+// de faltantes en texto en lugar de un QR con su álbum completo.
+// ----------------------------------------------------------------------------
+
+/**
+ * Parsea un texto tipo:
+ *   Figuritas App - Lista
+ *   Usa Méx Can 26
+ *   Me faltan
+ *   FWC 🌎: 7
+ *   MEX 🇲🇽: 19
+ *   USA 🇺🇸: 4, 13
+ *   ...
+ *
+ * Cada línea de datos es "CÓDIGO <lo que sea, ej. bandera>: núm, núm, ...".
+ * El código (FWC, MEX, USA, etc.) se matchea contra el campo `code` de
+ * SECTIONS.json. Como varias sub-secciones de "Especiales" comparten el
+ * mismo código (FWC1/FWC2/FWC3 son todas "FWC"), buscamos en cuál de ellas
+ * vive cada número.
+ */
+function parseMissingListText(text) {
+  const rawLines = text.split(/\r?\n/).map((l) => l.trim());
+
+  // Si encontramos una línea "Me faltan" (como la exporta Figuritas),
+  // arrancamos a leer justo después. Si no aparece, igual intentamos
+  // parsear todo: las líneas que no tengan el formato "CÓDIGO: números"
+  // simplemente se ignoran (encabezados, nombre del álbum, etc.).
+  const startMarker = rawLines.findIndex((l) => /^me\s+faltan\b/i.test(l));
+  const lines = (startMarker === -1 ? rawLines : rawLines.slice(startMarker + 1)).filter(Boolean);
+
+  const missingBySection = new Map(); // sectionId -> Set(num)
+  const unrecognizedCodes = new Set();
+  let matchedLines = 0;
+  let unmatchedLines = 0;
+
+  for (const line of lines) {
+    const m = line.match(/^([A-Za-zÀ-ÿ]{2,4})\b[^:]*:\s*(.+)$/);
+    if (!m) {
+      unmatchedLines++;
+      continue;
+    }
+    const code = m[1].toUpperCase();
+    const numTokens = m[2]
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const candidateSections = SECTIONS.filter((s) => s.code === code);
+    if (candidateSections.length === 0) {
+      unrecognizedCodes.add(code);
+      unmatchedLines++;
+      continue;
+    }
+
+    let matchedAny = false;
+    for (const numStr of numTokens) {
+      const section = findSectionForStickerNum(candidateSections, numStr);
+      if (!section) continue;
+      matchedAny = true;
+      const normalized = normalizeStickerNum(section, numStr);
+      if (!missingBySection.has(section.id)) missingBySection.set(section.id, new Set());
+      missingBySection.get(section.id).add(normalized);
+    }
+    if (matchedAny) matchedLines++;
+    else unmatchedLines++;
+  }
+
+  return {
+    missingBySection,
+    matchedLines,
+    unmatchedLines,
+    unrecognizedCodes: Array.from(unrecognizedCodes),
+  };
+}
+
+function findSectionForStickerNum(candidateSections, numStr) {
+  for (const section of candidateSections) {
+    if (section.stickers.includes(numStr)) return section;
+  }
+  // Fallback numérico, por si alguna vez llega "0" en vez de "00" o similar.
+  const n = parseInt(numStr, 10);
+  if (!Number.isNaN(n)) {
+    for (const section of candidateSections) {
+      if (section.stickers.some((s) => parseInt(s, 10) === n)) return section;
+    }
+  }
+  return null;
+}
+
+function normalizeStickerNum(section, numStr) {
+  if (section.stickers.includes(numStr)) return numStr;
+  const n = parseInt(numStr, 10);
+  return section.stickers.find((s) => parseInt(s, 10) === n) || numStr;
+}
+
+function missingKeySetFromParsed(missingBySection) {
+  const set = new Set();
+  for (const [sectionId, nums] of missingBySection) {
+    for (const num of nums) set.add(stickerKey(sectionId, num));
+  }
+  return set;
+}
+
+function computeSellFromMissingKeys(missingKeys) {
+  const bySection = [];
+  let totalItems = 0;
+  let totalValue = 0;
+
+  for (const section of SECTIONS) {
+    const rows = [];
+    for (const num of section.stickers) {
+      const key = stickerKey(section.id, num);
+      if (!missingKeys.has(key)) continue;
+      const entry = getEntry(key);
+      if (entry.owned && entry.qty > 1) {
+        const price = typeof entry.price === "number" ? entry.price : defaultPriceFor(section, num);
+        const kind = stickerKind(section, num);
+        rows.push({ key, num, price, kind, availableExtra: entry.qty - 1 });
+        totalItems++;
+        totalValue += price;
+      }
+    }
+    if (rows.length > 0) bySection.push({ section, rows });
+  }
+
+  return { bySection, totalItems, totalValue };
+}
+
+function setupPasteListModal() {
+  const modal = document.getElementById("paste-list-modal");
+  const textarea = document.getElementById("paste-list-textarea");
+  const feedback = document.getElementById("paste-list-feedback");
+
+  document.getElementById("btn-paste-missing-list").addEventListener("click", () => {
+    textarea.value = "";
+    feedback.textContent = "";
+    modal.classList.remove("hidden");
+    textarea.focus();
+  });
+  document.getElementById("paste-list-close").addEventListener("click", () => {
+    modal.classList.add("hidden");
+  });
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.classList.add("hidden");
+  });
+
+  document.getElementById("paste-list-check").addEventListener("click", () => {
+    const text = textarea.value;
+    if (!text.trim()) {
+      showToast("Pegá primero la lista que te enviaron");
+      return;
+    }
+
+    const parsed = parseMissingListText(text);
+    if (parsed.matchedLines === 0) {
+      feedback.textContent =
+        'No reconocí ninguna línea con el formato "CÓDIGO: números" (por ejemplo "MEX: 19"). Fijate que sea la lista de "Me faltan" tal como la exporta Figuritas.';
+      return;
+    }
+
+    const missingKeys = missingKeySetFromParsed(parsed.missingBySection);
+    const { bySection } = computeSellFromMissingKeys(missingKeys);
+
+    const totalLines = parsed.matchedLines + parsed.unmatchedLines;
+    let msg = `Reconocí ${parsed.matchedLines} de ${totalLines} líneas.`;
+    if (parsed.unrecognizedCodes.length > 0) {
+      msg += ` No reconocí el código: ${parsed.unrecognizedCodes.join(", ")}.`;
+    }
+    feedback.textContent = msg;
+
+    modal.classList.add("hidden");
+    showSellPreview(bySection);
   });
 }
 
@@ -2645,7 +2823,7 @@ function handleScannedText(text) {
       if (navigator.vibrate) navigator.vibrate(60);
       stopCamera();
       scannerModal.classList.add("hidden");
-      showSellPreview(clientOwnedList);
+      showSellPreview(computeSellToClient(clientOwnedList).bySection);
     } else if (scanMode === "trade") {
       // Same underlying decode as above, but shows a two-way comparison
       // (what I can give them + what they can give me) instead of a one-way
@@ -2786,6 +2964,7 @@ async function init() {
   setupTradeQrModal();
   setupTradeResultModal();
   setupPaymentQrModal();
+  setupPasteListModal();
   setupExtrasTab();
   setupSyncModal();
   initSyncOnBoot();

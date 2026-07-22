@@ -138,6 +138,10 @@
         <span class="btn-chip-icon">💳</span>
         <span>Mostrar QR de pago</span>
       </button>
+      <button id="btn-paste-missing-list" class="btn-chip">
+        <span class="btn-chip-icon">📋</span>
+        <span>Pegar lista de faltantes</span>
+      </button>
     </section>
     <div class="venta-filters" role="tablist" aria-label="Filtrar repetidas por tipo">
       <button class="chip-filter" data-kind="all" data-state="on">Todas</button>
@@ -198,7 +202,7 @@
   </section>
 
   <footer class="app-footer">
-    <p>Tus datos se guardan solo en este navegador/celular. <strong>Actualizar mi álbum</strong> lee tu propio QR de la app <strong>Figuritas</strong> y agrega automáticamente lo que te falta, sin borrar nada cargado a mano. <strong>Vender a un cliente</strong> (pestaña Venta) lee el QR de otra persona y te muestra, sin tocar tu álbum, cuáles de tus repetidas le podés separar. <strong>Mi QR para intercambiar</strong> es compatible con la pestaña "Cambiar" de la app oficial Figuritas, y además, si lo lee otra persona con esta app usando <strong>"Leer QR de otro coleccionista"</strong>, muestra en las dos direcciones qué repetidas de cada uno le sirven al otro. <strong>Mostrar QR de pago</strong> guarda una imagen tuya (Bre-B, Nequi, etc.) para mostrarla al cobrar; queda solo en este dispositivo, nunca se sincroniza ni se sube a ningún lado.</p>
+    <p>Tus datos se guardan solo en este navegador/celular. <strong>Actualizar mi álbum</strong> lee tu propio QR de la app <strong>Figuritas</strong> y agrega automáticamente lo que te falta, sin borrar nada cargado a mano. <strong>Vender a un cliente</strong> (pestaña Venta) lee el QR de otra persona y te muestra, sin tocar tu álbum, cuáles de tus repetidas le podés separar. <strong>Pegar lista de faltantes</strong> hace lo mismo pero a partir del texto que Figuritas exporta como lista, para cuando te lo mandan por WhatsApp en vez de mostrarte un QR. <strong>Mi QR para intercambiar</strong> es compatible con la pestaña "Cambiar" de la app oficial Figuritas, y además, si lo lee otra persona con esta app usando <strong>"Leer QR de otro coleccionista"</strong>, muestra en las dos direcciones qué repetidas de cada uno le sirven al otro. <strong>Mostrar QR de pago</strong> guarda una imagen tuya (Bre-B, Nequi, etc.) para mostrarla al cobrar; queda solo en este dispositivo, nunca se sincroniza ni se sube a ningún lado.</p>
   </footer>
 </div>
 
@@ -397,6 +401,37 @@
     <button id="payment-qr-remove" class="btn-ghost btn-ghost-small btn-chip-danger payment-qr-remove-btn hidden">
       Eliminar QR guardado
     </button>
+  </div>
+</div>
+
+<!-- Paste-list modal: "Pegar lista de faltantes" -->
+<div id="paste-list-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="paste-list-title">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2 id="paste-list-title">Pegar lista de faltantes</h2>
+      <button id="paste-list-close" class="btn-icon" aria-label="Cerrar">✕</button>
+    </div>
+    <p class="backup-text">
+      Si alguien te pasa por WhatsApp la lista de "Me faltan" que exporta la
+      app Figuritas (como esta), pegala acá tal cual — la app la compara
+      contra tu inventario y te muestra cuáles de tus repetidas le sirven.
+    </p>
+    <textarea
+      id="paste-list-textarea"
+      class="paste-list-textarea"
+      rows="10"
+      placeholder="Figuritas App - Lista
+Usa Méx Can 26
+Me faltan
+FWC 🌎: 7
+MEX 🇲🇽: 19
+KOR 🇰🇷: 13
+..."
+    ></textarea>
+    <p id="paste-list-feedback" class="import-stats-caption"></p>
+    <div class="modal-actions">
+      <button id="paste-list-check" class="btn-gold">Verificar</button>
+    </div>
   </div>
 </div>
 
