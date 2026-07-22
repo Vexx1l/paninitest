@@ -33,6 +33,7 @@ let openSections = new Set(); // ids of expanded team sections
 let searchQuery = "";
 let onlyMissing = false;
 let onlyRepeats = false;
+let onlyTopPlayers = false;
 let currentView = "album"; // "album" | "venta" | "stats" | "settings"
 let ventaFilterKind = "all"; // "all" | "escudo" | "formacion" | "especial"
 const KIND_LABEL = { escudo: "🛡️", formacion: "📋", especial: "⭐", comun: "" };
@@ -190,6 +191,17 @@ function totalStickerCount() {
   return SECTIONS.reduce((sum, s) => sum + s.stickers.length, 0);
 }
 
+// "Jugadores top" — reutiliza la misma lista de 20 países/jugadores que ya
+// cargamos para la pestaña 🌟 Extras (extras-data.json), para poder
+// ubicarlos rápido dentro del álbum principal sin duplicar esa data.
+function topPlayerFor(section) {
+  return EXTRAS_PLAYERS.find((p) => p.code === section.code) || null;
+}
+
+function sectionIsTopPlayer(section) {
+  return topPlayerFor(section) !== null;
+}
+
 // ----------------------------------------------------------------------------
 // Rendering
 // ----------------------------------------------------------------------------
@@ -204,6 +216,7 @@ const el = {
   pricePremium: document.getElementById("price-premium"),
   btnMissing: document.getElementById("btn-missing"),
   btnOnlyRepeats: document.getElementById("btn-onlyrepeats"),
+  btnTopPlayers: document.getElementById("btn-top-players"),
   btnReset: document.getElementById("btn-reset"),
   ventaBadge: document.getElementById("venta-badge"),
   syncBadge: document.getElementById("sync-badge"),
@@ -274,6 +287,9 @@ function renderSections() {
   el.sections.innerHTML = "";
 
   let visible = SECTIONS.filter(matchesSearch);
+  if (onlyTopPlayers) {
+    visible = visible.filter(sectionIsTopPlayer);
+  }
   if (onlyMissing) {
     visible = visible.filter(sectionHasMissing);
   } else if (onlyRepeats) {
@@ -284,10 +300,16 @@ function renderSections() {
     let msg;
     if (searchQuery) {
       msg = `No encontré ningún equipo con “${escapeHtml(searchQuery)}”.`;
+    } else if (onlyMissing && onlyTopPlayers) {
+      msg = "🎉 ¡Ya tenés completos los equipos de todos los jugadores top!";
     } else if (onlyMissing) {
       msg = "🎉 ¡Completaste todo tu álbum! No te falta ninguna figurita.";
+    } else if (onlyRepeats && onlyTopPlayers) {
+      msg = "No tenés repetidas en los equipos de jugadores top por ahora.";
     } else if (onlyRepeats) {
       msg = "No tenés repetidas en ningún equipo por ahora.";
+    } else if (onlyTopPlayers) {
+      msg = "No encontré ningún jugador top con esa búsqueda.";
     } else {
       msg = "No hay figuritas para mostrar.";
     }
@@ -317,9 +339,13 @@ function renderTeam(section) {
 
   const head = document.createElement("button");
   head.className = "team-head";
+  const topPlayer = topPlayerFor(section);
   head.innerHTML = `
     <span class="team-flag">${section.emoji}</span>
-    <span class="team-name">${escapeHtml(section.label)}</span>
+    <span class="team-name">
+      <span class="team-name-text">${escapeHtml(section.label)}</span>
+      ${topPlayer ? `<span class="team-top-player">⭐ ${escapeHtml(topPlayer.player)}</span>` : ""}
+    </span>
     <span class="team-repeat-badge${repeatExtra > 0 ? "" : " hidden"}">🔁 ${repeatExtra}</span>
     <span class="team-progress-wrap">
       <span class="team-progress-track"><span class="team-progress-fill" style="width:${pct}%"></span></span>
@@ -589,6 +615,13 @@ function setupToolbar() {
     }
     el.btnOnlyRepeats.dataset.state = onlyRepeats ? "on" : "off";
     el.btnOnlyRepeats.textContent = onlyRepeats ? "Mostrando repetidas" : "Solo repetidas";
+    renderSections();
+  });
+
+  el.btnTopPlayers.addEventListener("click", () => {
+    onlyTopPlayers = !onlyTopPlayers;
+    el.btnTopPlayers.dataset.state = onlyTopPlayers ? "on" : "off";
+    el.btnTopPlayers.textContent = onlyTopPlayers ? "⭐ Mostrando jugadores top" : "⭐ Jugadores top";
     renderSections();
   });
 

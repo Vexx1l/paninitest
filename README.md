@@ -89,9 +89,32 @@ funciona incluso con mala conexión (el "cascarón" de la app —HTML, CSS,
 JS— queda guardado en el celular; los datos siguen viviendo en
 `localStorage`/Firebase como siempre).
 
-Si actualizás el sitio en Vercel más adelante, puede que tengas que cerrar
-del todo la app instalada (deslizarla para cerrarla, no solo minimizarla) y
-volver a abrirla una o dos veces para que tome la versión nueva.
+### Si la app no toma tus últimos cambios (deploy que no se ve reflejado)
+
+La causa más común es el **service worker**: como esto es una PWA
+instalable, el navegador guarda una copia de `index.html`/`app.js`/etc. en
+caché para que abra rápido y funcione sin conexión. Antes, esa caché era
+"cache-first" (si ya tenía el archivo, ni miraba si había uno nuevo en el
+servidor), así que un deploy nuevo podía tardar mucho en verse — o no verse
+nunca. Ya lo corregí: ahora es **"network-first"** (siempre intenta traer
+la versión más nueva del servidor primero, y solo usa la copia guardada si
+no hay conexión), así que un deploy nuevo debería verse la próxima vez que
+abrís la app con internet.
+
+Aun así, como ya tenías la versión vieja instalada/abierta, puede que
+necesites un empujón único para que tome este cambio:
+
+- **Celular (PWA instalada):** cerrá del todo la app (deslizala para
+  cerrarla, no solo minimizarla) y abrila de nuevo. Si seguís viendo la
+  versión vieja, desinstalá el ícono y volvé a instalarlo desde el
+  navegador.
+- **Navegador (sin instalar como PWA):** hacé un refresco "duro"
+  (`Ctrl/Cmd + Shift + R`), o abrí las herramientas de desarrollador →
+  pestaña **Application/Almacenamiento** → **Service Workers** → tocá
+  **"Unregister"** (o "Update"), y recargá.
+- Confirmá también en el dashboard de Vercel que el último deploy diga
+  **"Ready"** y corresponda al commit que subiste — a veces el dominio
+  queda apuntando a un deploy anterior si el nuevo falló en el build.
 
 ## 🌟 Extras (Extra Stickers)
 
@@ -111,6 +134,23 @@ sincroniza con el resto del álbum (nube / backup) si tenés eso configurado.
   actuales — útil como respaldo o para compartir.
 - **Reiniciar**: vuelve a cargar los valores originales del Excel que
   subiste, por si querés empezar de nuevo desde ahí.
+
+## ⭐ Jugadores top
+
+En la pestaña **📖 Mi Álbum**, cada equipo que tiene una figura estelar
+(Messi en Argentina, Mbappé en Francia, Cristiano en Portugal, Vinícius en
+Brasil, Luis Díaz en Colombia, y otros 15 más) muestra el nombre del
+jugador debajo del nombre del equipo, para ubicarlos de un vistazo.
+
+Si tocás **"⭐ Jugadores top"** en la barra de filtros, la grilla se filtra
+para mostrar **solo** esos equipos — útil si querés enfocarte primero en
+completar los países de las figuras más buscadas. Se puede combinar con
+"Solo faltantes" o "Solo repetidas" (por ejemplo: "jugadores top" + "solo
+faltantes" te muestra únicamente lo que te falta de esos equipos puntuales).
+
+Esta lista es la misma que ya usa la pestaña 🌟 Extras para las
+variantes base/bronce/plata/oro — no es información nueva, solo una forma
+más rápida de encontrarlos dentro del álbum principal.
 
 ## Precios automáticos
 

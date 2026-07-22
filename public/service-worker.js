@@ -2,8 +2,16 @@
 // and let it open/work without a live connection. Not a full offline-first
 // strategy — Firebase sync calls and font requests always go to the
 // network as normal; only the app's own static files are cached.
+//
+// Strategy: NETWORK-FIRST with cache fallback. We always try the network
+// first so a new deploy shows up immediately the next time you open the
+// app with a connection; the cache is only used as a fallback when
+// there's no connection at all. (A pure cache-first strategy — the
+// previous version of this file — is why updates can silently stop
+// showing up: bump CACHE_VERSION below any time you want to force every
+// existing cache to be thrown out on the next visit.)
 
-const CACHE_VERSION = "v2";
+const CACHE_VERSION = "v3";
 const CACHE_NAME = `album-mundial-2026-${CACHE_VERSION}`;
 
 const APP_SHELL = [
@@ -38,25 +46,23 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Cache-first for the app's own same-origin files (so it opens instantly
-// and still works with no connection); everything else (Firebase, fonts,
-// etc.) just passes straight through to the network untouched.
+// Network-first for the app's own same-origin files: try the network so
+// deploys show up right away, and only fall back to the cache if the
+// network request fails (offline). Everything else (Firebase, fonts,
+// etc.) passes straight through untouched.
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== "GET" || url.origin !== self.location.origin) return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
-        .then((response) => {
-          if (response && response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
