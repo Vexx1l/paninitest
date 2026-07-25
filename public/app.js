@@ -22,6 +22,9 @@ const STORAGE_KEY = "figuritas-album-v1";
 // la barra de herramientas; esto es solo el valor por defecto.
 const PRICE_COMMON_KEY = "figuritas-price-common-v1";
 const PRICE_PREMIUM_KEY = "figuritas-price-premium-v1";
+// Si la lista de repetidas en texto ("Copiar lista" / "Ver como texto") debe
+// incluir, por cada figurita, cuántas unidades hay disponibles (x2, x3...).
+const SHOW_REPEAT_QTY_KEY = "figuritas-repeats-show-qty-v1";
 
 /** @type {Array<{id:string, code:string, emoji:string, label:string, stickers:string[]}>} */
 let SECTIONS = [];
@@ -37,6 +40,16 @@ let onlyTopPlayers = false;
 let currentView = "album"; // "album" | "venta" | "stats" | "settings"
 let ventaFilterKind = "all"; // "all" | "escudo" | "formacion" | "especial"
 const KIND_LABEL = { escudo: "🛡️", formacion: "📋", especial: "⭐", comun: "" };
+
+function loadShowRepeatQty() {
+  const v = localStorage.getItem(SHOW_REPEAT_QTY_KEY);
+  return v === null ? true : v === "1"; // por defecto, mostrar la cantidad
+}
+function saveShowRepeatQty(value) {
+  showRepeatQty = value;
+  localStorage.setItem(SHOW_REPEAT_QTY_KEY, value ? "1" : "0");
+}
+let showRepeatQty = loadShowRepeatQty();
 
 // ----------------------------------------------------------------------------
 // Persistence
@@ -232,6 +245,12 @@ const el = {
   ventaSummary: document.getElementById("venta-summary"),
   ventaList: document.getElementById("venta-list"),
   ventaCopy: document.getElementById("venta-copy"),
+  ventaShowQtyToggle: document.getElementById("venta-show-qty-toggle"),
+  ventaViewText: document.getElementById("venta-view-text"),
+  repeatsTextModal: document.getElementById("repeats-text-modal"),
+  repeatsTextOutput: document.getElementById("repeats-text-output"),
+  repeatsTextClose: document.getElementById("repeats-text-close"),
+  repeatsTextCopy: document.getElementById("repeats-text-copy"),
   statsCards: document.getElementById("stats-cards"),
   statsTeams: document.getElementById("stats-teams"),
 };
@@ -763,7 +782,8 @@ function buildRepeatsShareText() {
     lines.push(`${section.emoji} ${section.label}`);
     for (const r of rows) {
       const priceTxt = typeof r.price === "number" ? ` - $${r.price} c/u` : "";
-      lines.push(`  #${r.num} x${r.extra} disponibles${priceTxt}`);
+      const qtyTxt = showRepeatQty ? ` x${r.extra} disponibles` : "";
+      lines.push(`  #${r.num}${qtyTxt}${priceTxt}`);
     }
     lines.push("");
   }
@@ -771,17 +791,17 @@ function buildRepeatsShareText() {
   return lines.join("\n");
 }
 
-async function copyRepeatsList() {
-  const text = buildRepeatsShareText();
-  if (!text) {
-    showToast("Todavía no tenés repetidas para compartir");
-    return;
-  }
+/**
+ * Copia `text` al portapapeles, con fallback manual (textarea + execCommand)
+ * para navegadores o contextos sin permiso de Clipboard API. Devuelve true
+ * si se pudo copiar de alguna forma.
+ */
+async function copyTextToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text);
     showToast("Lista copiada — pegala en WhatsApp o donde quieras");
+    return true;
   } catch (e) {
-    // Fallback for browsers/contexts without Clipboard API permission
     const ta = document.createElement("textarea");
     ta.value = text;
     ta.style.position = "fixed";
@@ -791,11 +811,40 @@ async function copyRepeatsList() {
     try {
       document.execCommand("copy");
       showToast("Lista copiada — pegala en WhatsApp o donde quieras");
+      document.body.removeChild(ta);
+      return true;
     } catch (e2) {
+      document.body.removeChild(ta);
       showToast("No pude copiar. Mantené presionado el texto para copiarlo a mano.");
+      return false;
     }
-    document.body.removeChild(ta);
   }
+}
+
+async function copyRepeatsList() {
+  const text = buildRepeatsShareText();
+  if (!text) {
+    showToast("Todavía no tenés repetidas para compartir");
+    return;
+  }
+  await copyTextToClipboard(text);
+}
+
+/**
+ * Abre un modal con la lista de repetidas como texto plano, ya seleccionado,
+ * para que se pueda copiar a mano (tocar + "Copiar") en navegadores donde el
+ * copiado automático no funciona bien, o simplemente para verla completa.
+ */
+function openRepeatsTextModal() {
+  const text = buildRepeatsShareText();
+  if (!text) {
+    showToast("Todavía no tenés repetidas para compartir");
+    return;
+  }
+  el.repeatsTextOutput.value = text;
+  el.repeatsTextModal.classList.remove("hidden");
+  el.repeatsTextOutput.focus();
+  el.repeatsTextOutput.select();
 }
 
 function setupVenta() {
@@ -807,6 +856,27 @@ function setupVenta() {
     });
   });
   el.ventaCopy.addEventListener("click", copyRepeatsList);
+
+  el.ventaShowQtyToggle.checked = showRepeatQty;
+  el.ventaShowQtyToggle.addEventListener("change", () => {
+    saveShowRepeatQty(el.ventaShowQtyToggle.checked);
+    // Si el modal de texto está abierto, actualizamos lo que se ve al toque.
+    if (!el.repeatsTextModal.classList.contains("hidden")) {
+      el.repeatsTextOutput.value = buildRepeatsShareText();
+      el.repeatsTextOutput.select();
+    }
+  });
+
+  el.ventaViewText.addEventListener("click", openRepeatsTextModal);
+  el.repeatsTextClose.addEventListener("click", () => {
+    el.repeatsTextModal.classList.add("hidden");
+  });
+  el.repeatsTextModal.addEventListener("click", (e) => {
+    if (e.target === el.repeatsTextModal) el.repeatsTextModal.classList.add("hidden");
+  });
+  el.repeatsTextCopy.addEventListener("click", () => {
+    copyTextToClipboard(el.repeatsTextOutput.value);
+  });
 }
 
 // ----------------------------------------------------------------------------

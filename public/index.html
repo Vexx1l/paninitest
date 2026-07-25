@@ -152,10 +152,33 @@
     </div>
     <div id="venta-summary" class="repeats-summary"></div>
     <div id="venta-list" class="repeats-list"></div>
+    <label class="sync-toggle venta-qty-toggle">
+      <input id="venta-show-qty-toggle" type="checkbox" checked />
+      <span>Mostrar la cantidad de repetidas (x2, x3...) en la lista de texto</span>
+    </label>
     <div class="venta-actions">
       <button id="venta-copy" class="btn-gold">Copiar lista para compartir</button>
+      <button id="venta-view-text" class="btn-ghost">📋 Ver como texto</button>
     </div>
   </section>
+
+  <!-- Repeats-as-text modal: "Ver como texto" -->
+  <div id="repeats-text-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="repeats-text-title">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <h2 id="repeats-text-title">Lista de repetidas en texto</h2>
+        <button id="repeats-text-close" class="btn-icon" aria-label="Cerrar">✕</button>
+      </div>
+      <p class="backup-text">
+        El texto ya está seleccionado: tocalo y elegí "Copiar", o usá el botón
+        de abajo. Después pegalo donde quieras (WhatsApp, notas, etc.).
+      </p>
+      <textarea id="repeats-text-output" class="paste-list-textarea" rows="12" readonly></textarea>
+      <div class="modal-actions">
+        <button id="repeats-text-copy" class="btn-gold">Copiar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ==================== ESTADÍSTICAS ==================== -->
   <section id="view-stats" class="view hidden">
