@@ -152,33 +152,10 @@
     </div>
     <div id="venta-summary" class="repeats-summary"></div>
     <div id="venta-list" class="repeats-list"></div>
-    <label class="sync-toggle venta-qty-toggle">
-      <input id="venta-show-qty-toggle" type="checkbox" checked />
-      <span>Mostrar la cantidad de repetidas (x2, x3...) en la lista de texto</span>
-    </label>
     <div class="venta-actions">
-      <button id="venta-copy" class="btn-gold">Copiar lista para compartir</button>
-      <button id="venta-view-text" class="btn-ghost">📋 Ver como texto</button>
+      <button id="venta-copy" class="btn-gold">📤 Exportar lista de texto</button>
     </div>
   </section>
-
-  <!-- Repeats-as-text modal: "Ver como texto" -->
-  <div id="repeats-text-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="repeats-text-title">
-    <div class="modal-panel">
-      <div class="modal-head">
-        <h2 id="repeats-text-title">Lista de repetidas en texto</h2>
-        <button id="repeats-text-close" class="btn-icon" aria-label="Cerrar">✕</button>
-      </div>
-      <p class="backup-text">
-        El texto ya está seleccionado: tocalo y elegí "Copiar", o usá el botón
-        de abajo. Después pegalo donde quieras (WhatsApp, notas, etc.).
-      </p>
-      <textarea id="repeats-text-output" class="paste-list-textarea" rows="12" readonly></textarea>
-      <div class="modal-actions">
-        <button id="repeats-text-copy" class="btn-gold">Copiar</button>
-      </div>
-    </div>
-  </div>
 
   <!-- ==================== ESTADÍSTICAS ==================== -->
   <section id="view-stats" class="view hidden">
@@ -455,6 +432,42 @@ KOR 🇰🇷: 13
     <p id="paste-list-feedback" class="import-stats-caption"></p>
     <div class="modal-actions">
       <button id="paste-list-check" class="btn-gold">Verificar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export-list modal: "Exportar lista de texto" (Venta) -->
+<div id="export-list-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="export-list-title">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2 id="export-list-title">Exportar lista de repetidas</h2>
+      <button id="export-list-close" class="btn-icon" aria-label="Cerrar">✕</button>
+    </div>
+    <p class="backup-text">
+      Tocá el texto para seleccionarlo todo y copiarlo a mano, o usá el
+      botón "Copiar" de abajo.
+    </p>
+    <div class="export-list-options">
+      <label class="export-list-toggle">
+        <input type="checkbox" id="export-list-show-qty" />
+        <span>Mostrar cantidad de repetidas (x2, x3...)</span>
+      </label>
+      <label class="export-list-toggle">
+        <input type="checkbox" id="export-list-show-price" />
+        <span>Mostrar precio</span>
+      </label>
+      <label class="export-list-toggle">
+        <input type="checkbox" id="export-list-group-teams" />
+        <span>Agrupar por equipo</span>
+      </label>
+      <label class="export-list-toggle">
+        <input type="checkbox" id="export-list-only-players" />
+        <span>Solo jugadores (sin escudos/formaciones/especiales)</span>
+      </label>
+    </div>
+    <textarea id="export-list-textarea" class="paste-list-textarea" rows="12" readonly></textarea>
+    <div class="modal-actions">
+      <button id="export-list-copy" class="btn-gold">Copiar</button>
     </div>
   </div>
 </div>

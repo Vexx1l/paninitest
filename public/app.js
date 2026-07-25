@@ -22,9 +22,6 @@ const STORAGE_KEY = "figuritas-album-v1";
 // la barra de herramientas; esto es solo el valor por defecto.
 const PRICE_COMMON_KEY = "figuritas-price-common-v1";
 const PRICE_PREMIUM_KEY = "figuritas-price-premium-v1";
-// Si la lista de repetidas en texto ("Copiar lista" / "Ver como texto") debe
-// incluir, por cada figurita, cuántas unidades hay disponibles (x2, x3...).
-const SHOW_REPEAT_QTY_KEY = "figuritas-repeats-show-qty-v1";
 
 /** @type {Array<{id:string, code:string, emoji:string, label:string, stickers:string[]}>} */
 let SECTIONS = [];
@@ -40,16 +37,6 @@ let onlyTopPlayers = false;
 let currentView = "album"; // "album" | "venta" | "stats" | "settings"
 let ventaFilterKind = "all"; // "all" | "escudo" | "formacion" | "especial"
 const KIND_LABEL = { escudo: "🛡️", formacion: "📋", especial: "⭐", comun: "" };
-
-function loadShowRepeatQty() {
-  const v = localStorage.getItem(SHOW_REPEAT_QTY_KEY);
-  return v === null ? true : v === "1"; // por defecto, mostrar la cantidad
-}
-function saveShowRepeatQty(value) {
-  showRepeatQty = value;
-  localStorage.setItem(SHOW_REPEAT_QTY_KEY, value ? "1" : "0");
-}
-let showRepeatQty = loadShowRepeatQty();
 
 // ----------------------------------------------------------------------------
 // Persistence
@@ -245,12 +232,6 @@ const el = {
   ventaSummary: document.getElementById("venta-summary"),
   ventaList: document.getElementById("venta-list"),
   ventaCopy: document.getElementById("venta-copy"),
-  ventaShowQtyToggle: document.getElementById("venta-show-qty-toggle"),
-  ventaViewText: document.getElementById("venta-view-text"),
-  repeatsTextModal: document.getElementById("repeats-text-modal"),
-  repeatsTextOutput: document.getElementById("repeats-text-output"),
-  repeatsTextClose: document.getElementById("repeats-text-close"),
-  repeatsTextCopy: document.getElementById("repeats-text-copy"),
   statsCards: document.getElementById("stats-cards"),
   statsTeams: document.getElementById("stats-teams"),
 };
@@ -770,81 +751,60 @@ function renderVenta() {
   }
 }
 
-function buildRepeatsShareText() {
-  const { bySection, totalExtra } = computeRepeats(ventaFilterKind);
+function buildRepeatsShareText(opts = {}) {
+  const {
+    includeQty = true,
+    includePrice = true,
+    groupByTeam = true,
+    onlyPlayers = false,
+  } = opts;
+
+  const { bySection: rawBySection } = computeRepeats(ventaFilterKind);
+
+  // "Solo jugadores": deja afuera escudos/formaciones/especiales, que no
+  // son propiamente "jugadores".
+  const bySection = onlyPlayers
+    ? rawBySection
+        .map(({ section, rows }) => ({
+          section,
+          rows: rows.filter((r) => r.kind === "comun"),
+        }))
+        .filter(({ rows }) => rows.length > 0)
+    : rawBySection;
+
   if (bySection.length === 0) return "";
 
   const lines = [
     "🔁 Tengo estas figuritas repetidas del Álbum Mundial 2026 para vender/cambiar:",
     "",
   ];
+  let distinctCount = 0;
+  let totalExtra = 0;
+  let totalValue = 0;
+
   for (const { section, rows } of bySection) {
-    lines.push(`${section.emoji} ${section.label}`);
+    if (groupByTeam) lines.push(`${section.emoji} ${section.label}`);
     for (const r of rows) {
-      const priceTxt = typeof r.price === "number" ? ` - $${r.price} c/u` : "";
-      const qtyTxt = showRepeatQty ? ` x${r.extra} disponibles` : "";
-      lines.push(`  #${r.num}${qtyTxt}${priceTxt}`);
+      distinctCount++;
+      totalExtra += r.extra;
+      if (typeof r.price === "number") totalValue += r.extra * r.price;
+      const qtyTxt = includeQty ? ` x${r.extra} disponibles` : "";
+      const priceTxt = includePrice && typeof r.price === "number" ? ` - $${r.price} c/u` : "";
+      const prefix = groupByTeam ? "  " : `${section.label} `;
+      lines.push(`${prefix}#${r.num}${qtyTxt}${priceTxt}`);
     }
-    lines.push("");
+    if (groupByTeam) lines.push("");
   }
-  lines.push(`Total: ${totalExtra} figuritas repetidas disponibles.`);
+
+  lines.push(
+    includeQty
+      ? `Total: ${totalExtra} figuritas repetidas disponibles.`
+      : `Total: ${distinctCount} figuritas distintas disponibles.`
+  );
+  if (includePrice && totalValue > 0) {
+    lines.push(`Valor estimado: $${totalValue.toLocaleString("es-AR")}.`);
+  }
   return lines.join("\n");
-}
-
-/**
- * Copia `text` al portapapeles, con fallback manual (textarea + execCommand)
- * para navegadores o contextos sin permiso de Clipboard API. Devuelve true
- * si se pudo copiar de alguna forma.
- */
-async function copyTextToClipboard(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-    showToast("Lista copiada — pegala en WhatsApp o donde quieras");
-    return true;
-  } catch (e) {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-      document.execCommand("copy");
-      showToast("Lista copiada — pegala en WhatsApp o donde quieras");
-      document.body.removeChild(ta);
-      return true;
-    } catch (e2) {
-      document.body.removeChild(ta);
-      showToast("No pude copiar. Mantené presionado el texto para copiarlo a mano.");
-      return false;
-    }
-  }
-}
-
-async function copyRepeatsList() {
-  const text = buildRepeatsShareText();
-  if (!text) {
-    showToast("Todavía no tenés repetidas para compartir");
-    return;
-  }
-  await copyTextToClipboard(text);
-}
-
-/**
- * Abre un modal con la lista de repetidas como texto plano, ya seleccionado,
- * para que se pueda copiar a mano (tocar + "Copiar") en navegadores donde el
- * copiado automático no funciona bien, o simplemente para verla completa.
- */
-function openRepeatsTextModal() {
-  const text = buildRepeatsShareText();
-  if (!text) {
-    showToast("Todavía no tenés repetidas para compartir");
-    return;
-  }
-  el.repeatsTextOutput.value = text;
-  el.repeatsTextModal.classList.remove("hidden");
-  el.repeatsTextOutput.focus();
-  el.repeatsTextOutput.select();
 }
 
 function setupVenta() {
@@ -855,27 +815,87 @@ function setupVenta() {
       renderVenta();
     });
   });
-  el.ventaCopy.addEventListener("click", copyRepeatsList);
+}
 
-  el.ventaShowQtyToggle.checked = showRepeatQty;
-  el.ventaShowQtyToggle.addEventListener("change", () => {
-    saveShowRepeatQty(el.ventaShowQtyToggle.checked);
-    // Si el modal de texto está abierto, actualizamos lo que se ve al toque.
-    if (!el.repeatsTextModal.classList.contains("hidden")) {
-      el.repeatsTextOutput.value = buildRepeatsShareText();
-      el.repeatsTextOutput.select();
+// ----------------------------------------------------------------------------
+// "Exportar lista de repetidas" — un texto plano, seleccionable a mano
+// además de copiable con un botón, con varias opciones para armarlo a tu
+// gusto (cantidad, precio, agrupado por equipo, solo jugadores). Cada
+// preferencia queda guardada para la próxima vez.
+// ----------------------------------------------------------------------------
+const EXPORT_SHOW_QTY_KEY = "figuritas-export-show-qty";
+const EXPORT_SHOW_PRICE_KEY = "figuritas-export-show-price";
+const EXPORT_GROUP_TEAMS_KEY = "figuritas-export-group-teams";
+const EXPORT_ONLY_PLAYERS_KEY = "figuritas-export-only-players";
+
+function loadBoolPref(key, defaultValue) {
+  const raw = localStorage.getItem(key);
+  return raw === null ? defaultValue : raw === "1";
+}
+
+function saveBoolPref(key, value) {
+  localStorage.setItem(key, value ? "1" : "0");
+}
+
+function setupExportListModal() {
+  const modal = document.getElementById("export-list-modal");
+  const textarea = document.getElementById("export-list-textarea");
+  const cbQty = document.getElementById("export-list-show-qty");
+  const cbPrice = document.getElementById("export-list-show-price");
+  const cbGroups = document.getElementById("export-list-group-teams");
+  const cbOnlyPlayers = document.getElementById("export-list-only-players");
+
+  function currentOpts() {
+    return {
+      includeQty: cbQty.checked,
+      includePrice: cbPrice.checked,
+      groupByTeam: cbGroups.checked,
+      onlyPlayers: cbOnlyPlayers.checked,
+    };
+  }
+
+  function refreshText() {
+    const text = buildRepeatsShareText(currentOpts());
+    textarea.value = text || "No tenés repetidas para exportar con estas opciones.";
+  }
+
+  el.ventaCopy.addEventListener("click", () => {
+    cbQty.checked = loadBoolPref(EXPORT_SHOW_QTY_KEY, true);
+    cbPrice.checked = loadBoolPref(EXPORT_SHOW_PRICE_KEY, true);
+    cbGroups.checked = loadBoolPref(EXPORT_GROUP_TEAMS_KEY, true);
+    cbOnlyPlayers.checked = loadBoolPref(EXPORT_ONLY_PLAYERS_KEY, false);
+    refreshText();
+    modal.classList.remove("hidden");
+    textarea.focus();
+    textarea.select();
+  });
+
+  [
+    [cbQty, EXPORT_SHOW_QTY_KEY],
+    [cbPrice, EXPORT_SHOW_PRICE_KEY],
+    [cbGroups, EXPORT_GROUP_TEAMS_KEY],
+    [cbOnlyPlayers, EXPORT_ONLY_PLAYERS_KEY],
+  ].forEach(([cb, key]) => {
+    cb.addEventListener("change", () => {
+      saveBoolPref(key, cb.checked);
+      refreshText();
+    });
+  });
+
+  document.getElementById("export-list-close").addEventListener("click", () => {
+    modal.classList.add("hidden");
+  });
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.classList.add("hidden");
+  });
+
+  document.getElementById("export-list-copy").addEventListener("click", async () => {
+    const text = buildRepeatsShareText(currentOpts());
+    if (!text) {
+      showToast("No tenés repetidas para exportar con estas opciones");
+      return;
     }
-  });
-
-  el.ventaViewText.addEventListener("click", openRepeatsTextModal);
-  el.repeatsTextClose.addEventListener("click", () => {
-    el.repeatsTextModal.classList.add("hidden");
-  });
-  el.repeatsTextModal.addEventListener("click", (e) => {
-    if (e.target === el.repeatsTextModal) el.repeatsTextModal.classList.add("hidden");
-  });
-  el.repeatsTextCopy.addEventListener("click", () => {
-    copyTextToClipboard(el.repeatsTextOutput.value);
+    await copyTextToClipboard(text, "Lista copiada — pegala en WhatsApp o donde quieras");
   });
 }
 
@@ -2451,24 +2471,7 @@ async function copyTradeResult() {
     showToast("No hay ningún intercambio posible para copiar");
     return;
   }
-  try {
-    await navigator.clipboard.writeText(text);
-    showToast("Resumen copiado — pegalo en WhatsApp o donde quieras");
-  } catch (e) {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-      document.execCommand("copy");
-      showToast("Resumen copiado — pegalo en WhatsApp o donde quieras");
-    } catch (e2) {
-      showToast("No pude copiar. Mantené presionado el texto para copiarlo a mano.");
-    }
-    document.body.removeChild(ta);
-  }
+  await copyTextToClipboard(text, "Resumen copiado — pegalo en WhatsApp o donde quieras");
 }
 
 function setupTradeResultModal() {
@@ -2493,6 +2496,34 @@ function showToast(msg, ms = 2600) {
   t.classList.remove("hidden");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.add("hidden"), ms);
+}
+
+// Shared clipboard helper (with the old execCommand fallback for
+// browsers/contexts — like some in-app WhatsApp browsers — that don't
+// allow the modern Clipboard API).
+async function copyTextToClipboard(text, successMsg) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast(successMsg);
+    return true;
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      showToast(successMsg);
+      document.body.removeChild(ta);
+      return true;
+    } catch (e2) {
+      document.body.removeChild(ta);
+      showToast("No pude copiar automáticamente. Mantené presionado el texto para copiarlo a mano.");
+      return false;
+    }
+  }
 }
 
 // ============================================================================
@@ -3060,6 +3091,7 @@ async function init() {
   setupToolbar();
   setupTabs();
   setupVenta();
+  setupExportListModal();
   setupScanner();
   setupSellModal();
   setupBackupModal();

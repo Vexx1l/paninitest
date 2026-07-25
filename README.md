@@ -375,8 +375,24 @@ la pestaña **"💰 Venta"**, con:
 - Un resumen de cuántas figuritas repetidas tenés en total y su valor
   estimado (según el precio automático o el que hayas puesto a mano).
 - El listado agrupado por equipo, con cuántas te sobran de cada una.
-- Un botón **"Copiar lista para compartir"** que arma un texto listo para
-  pegar en WhatsApp o donde quieras, para ofrecerlas a otros coleccionistas.
+- Un botón **"📤 Exportar lista de texto"** que abre una ventana con el
+  texto ya armado, listo para copiar y pegar en WhatsApp o donde quieras.
+  Podés tocar el texto para seleccionarlo todo a mano, o usar el botón
+  "Copiar".
+- Ahí mismo hay varios tildes para armar el texto a tu gusto:
+  - **"Mostrar cantidad de repetidas"** — incluye cuántas tenés de cada
+    una (`x2 disponibles`) o solo lista qué figuritas tenés sin decir
+    cuántas, por si preferís no mostrar el stock exacto.
+  - **"Mostrar precio"** — agrega el precio de cada una (y el valor
+    estimado total al final), o lo deja afuera si preferís negociarlo
+    aparte.
+  - **"Agrupar por equipo"** — separa el listado con el nombre de cada
+    equipo como encabezado, o lo deja en una sola lista plana
+    "Equipo #número" por línea.
+  - **"Solo jugadores"** — excluye escudos, formaciones y especiales, y
+    deja solo las figuritas comunes (jugadores).
+  Cada tilde se guarda tal cual lo dejaste para la próxima vez que abras
+  el exportador.
 
 Importante: el escaneo de tu propio QR **no** trae información de cuántas
 copias tenés de cada figurita (solo si la tenés o no), así que la
